@@ -19,11 +19,10 @@ export function buildImportedDeck(
   return {
     id: `imported-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     name: trimmed !== '' ? trimmed : defaultDeckName(commanders),
-    source: { kind: 'imported' },
     ...(art ? { art } : {}),
     commanders: commanders.map((c) => c.name),
     cardCount: resolved.reduce((n, c) => n + c.quantity, 0),
-    updatedAt: now.toISOString(),
+    importedAt: now.toISOString(),
     keywords: deckKeywords(resolved, entryIdByKeyword),
     ...(notFound.length > 0 ? { unresolved: notFound.map((l) => l.raw) } : {}),
   }

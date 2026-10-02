@@ -953,10 +953,3 @@ button:disabled {
   display: block;
   background: var(--bg-overlay);
 }
-
-.built-in-toggle {
-  align-self: flex-start;
-  padding: 0 4px;
-  font-size: 14px;
-  color: var(--text-faint);
-}

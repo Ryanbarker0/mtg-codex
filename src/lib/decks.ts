@@ -1,9 +1,6 @@
 /**
- * The shape of deck data, shared by scripts/ingestDecks.ts, the import flow and the app.
- *
- * Built-in decks come from an Archidekt folder read at build time, because Archidekt does not
- * allow browser requests from other origins. Imported decks are pasted as text, resolved on
- * Scryfall in the browser, and kept in IndexedDB on the device. In both cases a card's
+ * The shape of a deck. Decks are pasted as text, resolved on Scryfall in the browser, and
+ * kept in IndexedDB on the device; nothing ships with the app and nothing is hosted. A card's
  * keywords are Scryfall's own `keywords` list, which uses the same names as the codex, so
  * every mechanic maps to an entry without guesswork.
  */
@@ -17,38 +14,21 @@ export interface DeckKeyword {
   cards: string[]
 }
 
-export type DeckSource =
-  /** Read from the Archidekt folder at build time and shipped with the app. */
-  | { kind: 'built-in'; url: string }
-  /** Pasted and resolved on this device. */
-  | { kind: 'imported' }
-
 export interface Deck {
   id: string
   name: string
-  source: DeckSource
-  /** Featured art for the deck. */
+  /** The commander's art, from Scryfall. */
   art?: string
   commanders: string[]
   cardCount: number
-  updatedAt: string
+  /** When the deck was imported. */
+  importedAt: string
   keywords: DeckKeyword[]
-  /** Lines of a pasted list that Scryfall could not match, kept so the owner can see them. */
+  /** Lines of the pasted list that Scryfall could not match, kept so the owner can see them. */
   unresolved?: string[]
 }
 
-export interface DecksData {
-  generatedAt: string
-  folder: {
-    id: number
-    name: string
-    url: string
-    owner: string
-  }
-  decks: Deck[]
-}
-
-/** A card as the keyword grouping needs it, whichever source it came from. */
+/** A card as the keyword grouping needs it. */
 export interface KeywordedCard {
   name: string
   keywords: string[]

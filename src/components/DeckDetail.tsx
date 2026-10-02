@@ -9,8 +9,7 @@ import { SourceTag } from './SourceTag'
 interface Props {
   deck: Deck
   onOpenEntry: (id: string) => void
-  /** Present for decks imported on this device. */
-  onRemove?: () => void
+  onRemove: () => void
   onBack: () => void
 }
 
@@ -45,7 +44,7 @@ export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
       ),
   })).filter((g) => g.rows.length > 0)
 
-  const updated = new Date(deck.updatedAt)
+  const imported = new Date(deck.importedAt)
 
   return (
     <article className="detail" key={deck.id}>
@@ -60,20 +59,8 @@ export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
           <h1>{deck.name}</h1>
           {deck.commanders.length > 0 && <p className="muted">{deck.commanders.join(' / ')}</p>}
           <p className="faint small">
-            {deck.cardCount} cards ·{' '}
-            {deck.source.kind === 'built-in' ? (
-              <>
-                updated {updated.toLocaleDateString(undefined, { dateStyle: 'medium' })} ·{' '}
-                <a href={deck.source.url} target="_blank" rel="noreferrer">
-                  Archidekt ↗
-                </a>
-              </>
-            ) : (
-              <>
-                imported {updated.toLocaleDateString(undefined, { dateStyle: 'medium' })} on this
-                device
-              </>
-            )}
+            {deck.cardCount} cards · imported{' '}
+            {imported.toLocaleDateString(undefined, { dateStyle: 'medium' })} on this device
           </p>
         </div>
       </header>
@@ -122,19 +109,17 @@ export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
         </section>
       ))}
 
-      {onRemove && (
-        <div className="row">
-          <button
-            className={confirming ? 'danger' : 'ghost'}
-            onClick={() => {
-              if (confirming) onRemove()
-              else setConfirming(true)
-            }}
-          >
-            {confirming ? 'Tap again to remove this deck' : 'Remove deck from this device'}
-          </button>
-        </div>
-      )}
+      <div className="row">
+        <button
+          className={confirming ? 'danger' : 'ghost'}
+          onClick={() => {
+            if (confirming) onRemove()
+            else setConfirming(true)
+          }}
+        >
+          {confirming ? 'Tap again to remove this deck' : 'Remove deck from this device'}
+        </button>
+      </div>
     </article>
   )
 }

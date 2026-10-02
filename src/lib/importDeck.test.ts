@@ -42,7 +42,7 @@ describe('buildImportedDeck', () => {
       new Date('2026-10-02T10:00:00Z'),
     )
     expect(deck.name).toBe('Yuriko')
-    expect(deck.source).toEqual({ kind: 'imported' })
+    expect(deck.importedAt).toBe('2026-10-02T10:00:00.000Z')
     expect(deck.commanders).toEqual(["Yuriko, the Tiger's Shadow"])
     expect(deck.art).toBe('https://cards/yuriko.jpg')
     expect(deck.cardCount).toBe(32)

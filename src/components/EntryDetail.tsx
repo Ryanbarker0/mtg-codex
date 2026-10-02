@@ -13,7 +13,7 @@ import { SourceTag } from './SourceTag'
 
 interface Props {
   entry: Entry
-  /** Built-in and imported decks, for the "In your decks" block. */
+  /** The decks on this device, for the "In your decks" block. */
   decks: Deck[]
   onOpen: (id: string) => void
   onOpenDeck: (id: string) => void

@@ -67,47 +67,6 @@ describe('App', () => {
   })
 })
 
-describe('Decks', () => {
-  beforeEach(() => {
-    window.location.hash = ''
-    localStorage.clear()
-    vi.stubGlobal('fetch', vi.fn(emptySearch))
-    Element.prototype.scrollTo = vi.fn()
-  })
-  afterEach(() => {
-    cleanup()
-    vi.unstubAllGlobals()
-  })
-
-  it('lists the decks and shows the mechanics of one', () => {
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: 'Decks' }))
-    expect(window.location.hash).toBe('#/decks')
-    const list = screen.getByRole('region', { name: 'Decks' })
-    // Built-in decks are hidden until asked for; the codex comes first.
-    expect(within(list).queryByRole('button', { name: /Eldrazi Storm/ })).not.toBeInTheDocument()
-    fireEvent.click(within(list).getByRole('button', { name: /Show 10 built-in decks/ }))
-    fireEvent.click(within(list).getByRole('button', { name: /Eldrazi Storm/ }))
-    expect(window.location.hash).toMatch(/^#\/decks\/\d+$/)
-    const deckPane = screen.getByRole('region', { name: 'Deck' })
-    expect(within(deckPane).getByText('Keyword ability', { exact: false })).toBeInTheDocument()
-    // Tapping a mechanic opens its codex entry.
-    const row = within(deckPane)
-      .getAllByRole('button')
-      .find((b) => b.className === 'entry-row')
-    fireEvent.click(row!)
-    expect(window.location.hash).toMatch(/^#\/e\//)
-    expect(screen.getByRole('region', { name: 'Entry' })).toBeInTheDocument()
-  })
-
-  it('shows which decks use an entry', () => {
-    window.location.hash = '#/e/flying'
-    render(<App />)
-    const entry = screen.getByRole('region', { name: 'Entry' })
-    expect(within(entry).getByText('In your decks')).toBeInTheDocument()
-  })
-})
-
 describe('Deck import', () => {
   /** A Scryfall collection answer for whatever names were asked for. */
   const collection = (names: string[]) =>
@@ -172,5 +131,23 @@ describe('Deck import', () => {
     expect(within(deckPane).getByText(/33 cards/)).toBeInTheDocument()
     expect(within(deckPane).getByRole('button', { name: /Remove deck/ })).toBeInTheDocument()
     expect(window.location.hash).toMatch(/^#\/decks\/imported-/)
+
+    // The deck is listed, and the mechanic's entry knows about it.
+    fireEvent.click(within(deckPane).getByRole('button', { name: /^Back to the deck list/ }))
+    const list = screen.getByRole('region', { name: 'Decks' })
+    expect(within(list).getByRole('button', { name: /^Yuriko/ })).toBeInTheDocument()
+    fireEvent.click(within(list).getByRole('button', { name: /^Yuriko/ }))
+    fireEvent.click(within(screen.getByRole('region', { name: 'Deck' })).getByText('Flying'))
+    const entry = screen.getByRole('region', { name: 'Entry' })
+    expect(within(entry).getByText('In your decks')).toBeInTheDocument()
+    expect(within(entry).getByRole('button', { name: /^Yuriko/ })).toBeInTheDocument()
+  })
+
+  it('starts with no decks', () => {
+    window.location.hash = '#/decks'
+    render(<App />)
+    const list = screen.getByRole('region', { name: 'Decks' })
+    expect(within(list).getByText(/Paste a decklist/)).toBeInTheDocument()
+    expect(within(list).queryAllByRole('button', { name: /cards ·/ })).toHaveLength(0)
   })
 })

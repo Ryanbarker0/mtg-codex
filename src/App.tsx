@@ -7,7 +7,6 @@ import { EntryDetail } from './components/EntryDetail'
 import { EntryList } from './components/EntryList'
 import type { Entry } from './lib/codex'
 import { codex, entriesById } from './lib/codexData'
-import { builtInDecks, decksData } from './lib/decksData'
 import { loadRecent, pushRecent } from './lib/recent'
 import { CODEX_ROOT, DECK_IMPORT, DECKS_ROOT, useRoute } from './lib/route'
 import { indexEntries, search, type KindFilter } from './lib/search'
@@ -23,16 +22,6 @@ const FILTERS: Array<{ value: KindFilter; label: string }> = [
 ]
 
 const index = indexEntries(codex.entries)
-const BUILT_IN_KEY = 'mtg-codex:show-built-in-decks'
-
-/** The built-in decks are hidden unless this device has asked for them: the app is a codex first. */
-function loadShowBuiltIn(): boolean {
-  try {
-    return localStorage.getItem(BUILT_IN_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
 
 export default function App() {
   const { route, navigate, back } = useRoute()
@@ -45,28 +34,16 @@ export default function App() {
       : loadRecent(),
   )
   const [about, setAbout] = useState(false)
-  const [showBuiltIn, setShowBuiltIn] = useState(loadShowBuiltIn)
   const userDecks = useUserDecks()
   const inputRef = useRef<HTMLInputElement>(null)
   const detailRef = useRef<HTMLElement>(null)
 
-  const allDecks = [...userDecks.decks, ...builtInDecks]
   const entryId = route.view === 'codex' ? route.entryId : null
   const entry = entryId ? entriesById.get(entryId) : undefined
   const deckId = route.view === 'decks' ? route.deckId : null
   const importing = route.view === 'decks' && route.importing === true
-  const deck = deckId !== null ? allDecks.find((d) => d.id === deckId) : undefined
+  const deck = deckId !== null ? userDecks.decks.find((d) => d.id === deckId) : undefined
   const showingDetail = entryId !== null || deckId !== null || importing
-
-  const toggleBuiltIn = () => {
-    const next = !showBuiltIn
-    setShowBuiltIn(next)
-    try {
-      localStorage.setItem(BUILT_IN_KEY, String(next))
-    } catch {
-      // Preference just will not persist.
-    }
-  }
 
   const results = useMemo(() => search(index, query, filter), [query, filter])
 
@@ -205,7 +182,7 @@ export default function App() {
             {entry ? (
               <EntryDetail
                 entry={entry}
-                decks={allDecks}
+                decks={userDecks.decks}
                 onOpen={openEntry}
                 onOpenDeck={openDeck}
                 onBack={() => back(CODEX_ROOT)}
@@ -233,11 +210,7 @@ export default function App() {
           <section className="pane list-pane" aria-label="Decks">
             <div className="pane-body">
               <DeckList
-                userDecks={userDecks.decks}
-                builtInDecks={builtInDecks}
-                builtInLabel={`${decksData.folder.owner}'s decks`}
-                showBuiltIn={showBuiltIn}
-                onToggleBuiltIn={toggleBuiltIn}
+                decks={userDecks.decks}
                 selectedId={deck?.id ?? null}
                 onOpen={openDeck}
                 onImport={() => navigate(DECK_IMPORT)}
@@ -258,14 +231,10 @@ export default function App() {
               <DeckDetail
                 deck={deck}
                 onOpenEntry={openEntry}
-                onRemove={
-                  deck.source.kind === 'imported'
-                    ? () => {
-                        userDecks.removeDeck(deck.id)
-                        navigate(DECKS_ROOT)
-                      }
-                    : undefined
-                }
+                onRemove={() => {
+                  userDecks.removeDeck(deck.id)
+                  navigate(DECKS_ROOT)
+                }}
                 onBack={() => back(DECKS_ROOT)}
               />
             ) : deckId !== null && !userDecks.loaded ? (
