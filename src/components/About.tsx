@@ -60,7 +60,8 @@ export function About({ onClose }: { onClose: () => void }) {
           </div>
           <p className="faint small">
             Data compiled {generated.toLocaleDateString(undefined, { dateStyle: 'long' })}.{' '}
-            {codex.entries.length.toLocaleString()} entries. Works offline once loaded.
+            {codex.entries.length.toLocaleString()} entries. Works offline once loaded. Decks you
+            add are stored on this device only and are never sent anywhere.
           </p>
           <p className="faint small">
             MTG Codex is unofficial Fan Content permitted under the Fan Content Policy. Not

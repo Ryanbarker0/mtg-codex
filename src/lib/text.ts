@@ -10,3 +10,11 @@ export function normaliseText(text: string): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+/** Straightens quotes and dashes without lowercasing, for text sent to Scryfall. */
+export function straightenPunctuation(text: string): string {
+  return text
+    .replace(/[‘’‚‛′`´]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .replace(/[‐-―−]/g, '-')
+}

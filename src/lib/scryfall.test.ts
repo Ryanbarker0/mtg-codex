@@ -20,3 +20,53 @@ describe('scryfall', () => {
     expect(card.imageNormal).toBe('n')
   })
 })
+
+describe('matchCollectionCard', () => {
+  const cards = [
+    {
+      id: 'a',
+      name: 'Sol Ring',
+      type_line: 'Artifact',
+      scryfall_uri: '',
+      set: 'cmm',
+      collector_number: '464',
+    },
+    {
+      id: 'b',
+      name: 'Counterspell',
+      type_line: 'Instant',
+      scryfall_uri: '',
+      set: 'mh2',
+      collector_number: '267',
+    },
+    {
+      id: 'c',
+      name: 'Valakut Awakening // Valakut Stoneforge',
+      type_line: 'Instant // Land',
+      scryfall_uri: '',
+      set: 'znr',
+      collector_number: '174',
+      card_faces: [{ name: 'Valakut Awakening' }, { name: 'Valakut Stoneforge' }],
+    },
+  ]
+  const line = (name: string, set?: string, collectorNumber?: string) => ({
+    quantity: 1,
+    name,
+    set,
+    collectorNumber,
+    isCommander: false,
+    raw: name,
+  })
+
+  it('matches by printing only when the name agrees', async () => {
+    const { matchCollectionCard } = await import('./scryfall')
+    expect(matchCollectionCard(line('Sol Ring', 'cmm', '464'), cards, true)?.id).toBe('a')
+    expect(matchCollectionCard(line('Lightning Bolt', 'cmm', '464'), cards, true)).toBeUndefined()
+  })
+
+  it('matches by name, including a single face of a double-faced card', async () => {
+    const { matchCollectionCard } = await import('./scryfall')
+    expect(matchCollectionCard(line('counterspell'), cards, false)?.id).toBe('b')
+    expect(matchCollectionCard(line('Valakut Awakening'), cards, false)?.id).toBe('c')
+  })
+})

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T08:31:46.712Z",
+  "generatedAt": "2026-10-02T09:40:00.819Z",
   "folder": {
     "id": 1553499,
     "name": "Owned",
@@ -8,9 +8,12 @@
   },
   "decks": [
     {
-      "id": 21410711,
+      "id": "21410711",
       "name": "Blight Curse - Lorwyn Eclipsed Commander Deck",
-      "url": "https://archidekt.com/decks/21410711",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/21410711"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/ecc/9a2e4252-9fbc-4d43-8935-db2cafaa7b5f_art_crop.jpg",
       "commanders": ["Auntie Ool, Cursewretch"],
       "cardCount": 100,
@@ -119,9 +122,12 @@
       ]
     },
     {
-      "id": 16627787,
+      "id": "16627787",
       "name": "Counters Modified [Tidus]",
-      "url": "https://archidekt.com/decks/16627787",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/16627787"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/fic/2cfd4494-346c-4cbc-8072-e267254cefcc_art_crop.jpg",
       "commanders": ["Tidus, Yuna's Guardian"],
       "cardCount": 100,
@@ -281,9 +287,12 @@
       ]
     },
     {
-      "id": 21410744,
+      "id": "21410744",
       "name": "Dance of the Elements - Lorwyn Eclipsed Commander Deck",
-      "url": "https://archidekt.com/decks/21410744",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/21410744"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/ecc/5924c01f-2815-4e37-b700-3ba6cc81e0e4_art_crop.jpg",
       "commanders": ["Ashling, the Limitless"],
       "cardCount": 100,
@@ -420,9 +429,12 @@
       ]
     },
     {
-      "id": 25371782,
+      "id": "25371782",
       "name": "Dinos [Pantlaza]",
-      "url": "https://archidekt.com/decks/25371782",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/25371782"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/lcc/2524645e-b066-4351-885b-10faa8d819d7_art_crop.jpg",
       "commanders": ["Pantlaza, Sun-Favored"],
       "cardCount": 100,
@@ -541,9 +553,12 @@
       ]
     },
     {
-      "id": 25494113,
+      "id": "25494113",
       "name": "Eldrazi Storm [Ulalek]",
-      "url": "https://archidekt.com/decks/25494113",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/25494113"
+      },
       "art": "https://card-images.archidekt.com/art/front/f/d/fdad1b0e-d3cc-4d76-ae7e-fee12558cf2c.webp",
       "commanders": ["Ulalek, Fused Atrocity"],
       "cardCount": 100,
@@ -659,9 +674,12 @@
       ]
     },
     {
-      "id": 26703455,
+      "id": "26703455",
       "name": "Goaded Blink [Dack Fayden, Helping Hand]",
-      "url": "https://archidekt.com/decks/26703455",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/26703455"
+      },
       "art": "https://card-images.archidekt.com/art/front/7/7/77a1ef5a-9ebf-4e23-97c6-39ff744c84da.webp",
       "commanders": ["Dack Fayden, Helping Hand"],
       "cardCount": 101,
@@ -828,9 +846,12 @@
       ]
     },
     {
-      "id": 16650210,
+      "id": "16650210",
       "name": "Group Hug [Second Doctor]",
-      "url": "https://archidekt.com/decks/16650210",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/16650210"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/who/dbcdf625-d257-48b8-8714-f49d99135706_art_crop.jpg",
       "commanders": ["The Second Doctor", "Clara Oswald"],
       "cardCount": 100,
@@ -934,9 +955,12 @@
       ]
     },
     {
-      "id": 26845751,
+      "id": "26845751",
       "name": "Ninjas [Yuriko, the Tiger’s Shadow]",
-      "url": "https://archidekt.com/decks/26845751",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/26845751"
+      },
       "art": "https://card-images.archidekt.com/art/front/f/e/fe9be3e0-076c-4703-9750-2a6b0a178bc9.webp",
       "commanders": ["Yuriko, the Tiger's Shadow"],
       "cardCount": 100,
@@ -1080,9 +1104,12 @@
       ]
     },
     {
-      "id": 21410671,
+      "id": "21410671",
       "name": "Prismari Artistry - Secrets of Strixhaven",
-      "url": "https://archidekt.com/decks/21410671",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/21410671"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/soc/a5b3dbb2-c090-4118-9e47-56c16202572c_art_crop.jpg",
       "commanders": ["Rootha, Mastering the Moment"],
       "cardCount": 100,
@@ -1229,9 +1256,12 @@
       ]
     },
     {
-      "id": 25407398,
+      "id": "25407398",
       "name": "Sauron, Lord of the Rings (Precon)",
-      "url": "https://archidekt.com/decks/25407398",
+      "source": {
+        "kind": "built-in",
+        "url": "https://archidekt.com/decks/25407398"
+      },
       "art": "https://storage.googleapis.com/archidekt-card-images/ltc/fc53dec0-79fe-4f6f-9d5b-cf298588e808_art_crop.jpg",
       "commanders": ["Sauron, Lord of the Rings"],
       "cardCount": 100,

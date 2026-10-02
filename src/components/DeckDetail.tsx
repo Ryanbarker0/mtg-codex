@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { Entry, EntryKind } from '../lib/codex'
 import { entriesById } from '../lib/codexData'
 import type { Deck, DeckKeyword } from '../lib/decks'
@@ -8,6 +9,8 @@ import { SourceTag } from './SourceTag'
 interface Props {
   deck: Deck
   onOpenEntry: (id: string) => void
+  /** Present for decks imported on this device. */
+  onRemove?: () => void
   onBack: () => void
 }
 
@@ -19,7 +22,14 @@ interface Row {
 }
 
 /** Every mechanic in a deck, grouped by kind, with the cards that carry it. */
-export function DeckDetail({ deck, onOpenEntry, onBack }: Props) {
+export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
+  const [confirming, setConfirming] = useState(false)
+  useEffect(() => {
+    if (!confirming) return
+    const timer = window.setTimeout(() => setConfirming(false), 4000)
+    return () => window.clearTimeout(timer)
+  }, [confirming])
+
   const rows: Row[] = deck.keywords.flatMap((keyword) => {
     const entry = entriesById.get(keyword.entryId)
     return entry ? [{ entry, keyword }] : []
@@ -48,16 +58,39 @@ export function DeckDetail({ deck, onOpenEntry, onBack }: Props) {
         {deck.art && <img className="deck-banner" src={deck.art} alt="" />}
         <div className="deck-head-text">
           <h1>{deck.name}</h1>
-          <p className="muted">{deck.commanders.join(' / ')}</p>
+          {deck.commanders.length > 0 && <p className="muted">{deck.commanders.join(' / ')}</p>}
           <p className="faint small">
-            {deck.cardCount} cards · updated{' '}
-            {updated.toLocaleDateString(undefined, { dateStyle: 'medium' })} ·{' '}
-            <a href={deck.url} target="_blank" rel="noreferrer">
-              Archidekt ↗
-            </a>
+            {deck.cardCount} cards ·{' '}
+            {deck.source.kind === 'built-in' ? (
+              <>
+                updated {updated.toLocaleDateString(undefined, { dateStyle: 'medium' })} ·{' '}
+                <a href={deck.source.url} target="_blank" rel="noreferrer">
+                  Archidekt ↗
+                </a>
+              </>
+            ) : (
+              <>
+                imported {updated.toLocaleDateString(undefined, { dateStyle: 'medium' })} on this
+                device
+              </>
+            )}
           </p>
         </div>
       </header>
+
+      {deck.unresolved && deck.unresolved.length > 0 && (
+        <div className="notice">
+          <strong>
+            {deck.unresolved.length} {deck.unresolved.length === 1 ? 'line was' : 'lines were'} not
+            found on Scryfall and left out
+          </strong>
+          <ul className="unresolved">
+            {deck.unresolved.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {groups.length === 0 && <div className="empty">No mechanics found in this deck.</div>}
 
@@ -88,6 +121,20 @@ export function DeckDetail({ deck, onOpenEntry, onBack }: Props) {
           </ul>
         </section>
       ))}
+
+      {onRemove && (
+        <div className="row">
+          <button
+            className={confirming ? 'danger' : 'ghost'}
+            onClick={() => {
+              if (confirming) onRemove()
+              else setConfirming(true)
+            }}
+          >
+            {confirming ? 'Tap again to remove this deck' : 'Remove deck from this device'}
+          </button>
+        </div>
+      )}
     </article>
   )
 }

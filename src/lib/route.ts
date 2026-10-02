@@ -2,26 +2,32 @@ import { useEffect, useState } from 'react'
 
 /**
  * Hash routing, so every screen has a shareable address and the browser's back gesture
- * works. "#/" is the codex, "#/e/<id>" an entry, "#/decks" the deck list and
- * "#/decks/<id>" a deck.
+ * works. "#/" is the codex, "#/e/<id>" an entry, "#/decks" the deck list, "#/decks/<id>" a
+ * deck and "#/decks/import" the import screen.
  */
 
 export type Route =
-  { view: 'codex'; entryId: string | null } | { view: 'decks'; deckId: number | null }
+  | { view: 'codex'; entryId: string | null }
+  | { view: 'decks'; deckId: string | null; importing?: boolean }
 
 export const CODEX_ROOT: Route = { view: 'codex', entryId: null }
 export const DECKS_ROOT: Route = { view: 'decks', deckId: null }
+export const DECK_IMPORT: Route = { view: 'decks', deckId: null, importing: true }
 
 export function parseHash(hash: string): Route {
   const entry = hash.match(/^#\/e\/([^/?#]+)/)
   if (entry) return { view: 'codex', entryId: decodeURIComponent(entry[1]) }
-  const deck = hash.match(/^#\/decks(?:\/(\d+))?(?:[/?#]|$)/)
-  if (deck) return { view: 'decks', deckId: deck[1] ? Number(deck[1]) : null }
+  if (/^#\/decks\/import(?:[/?#]|$)/.test(hash)) return DECK_IMPORT
+  const deck = hash.match(/^#\/decks(?:\/([^/?#]+))?(?:[/?#]|$)/)
+  if (deck) return { view: 'decks', deckId: deck[1] ? decodeURIComponent(deck[1]) : null }
   return CODEX_ROOT
 }
 
 export function hashFor(route: Route): string {
-  if (route.view === 'decks') return route.deckId === null ? '#/decks' : `#/decks/${route.deckId}`
+  if (route.view === 'decks') {
+    if (route.importing) return '#/decks/import'
+    return route.deckId === null ? '#/decks' : `#/decks/${encodeURIComponent(route.deckId)}`
+  }
   return route.entryId === null ? '#/' : `#/e/${encodeURIComponent(route.entryId)}`
 }
 

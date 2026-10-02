@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Entry } from '../lib/codex'
 import { codex, entriesById, ruleNode } from '../lib/codexData'
+import type { Deck } from '../lib/decks'
 import { decksUsing } from '../lib/decksData'
 import type { ExampleCard } from '../lib/scryfall'
 import { CardImage } from './CardImage'
@@ -12,21 +13,23 @@ import { SourceTag } from './SourceTag'
 
 interface Props {
   entry: Entry
+  /** Built-in and imported decks, for the "In your decks" block. */
+  decks: Deck[]
   onOpen: (id: string) => void
-  onOpenDeck: (id: number) => void
+  onOpenDeck: (id: string) => void
   onBack: () => void
 }
 
 const RULES_SOURCE = `Comprehensive Rules, ${codex.comprehensiveRules.effectiveDate}`
 
-export function EntryDetail({ entry, onOpen, onOpenDeck, onBack }: Props) {
+export function EntryDetail({ entry, decks, onOpen, onOpenDeck, onBack }: Props) {
   const [card, setCard] = useState<ExampleCard | null>(null)
   const wiki = entry.wiki
   const related = entry.related
     .map((id) => entriesById.get(id))
     .filter((e): e is Entry => e !== undefined)
   const sections = entry.ruleNumbers.map((n) => ({ number: n, node: ruleNode(n) }))
-  const uses = decksUsing(entry.id)
+  const uses = decksUsing(entry.id, decks)
   const hasRules = sections.some((s) => s.node && !s.node.omitted)
 
   const metaParts: string[] = []
@@ -138,7 +141,7 @@ export function EntryDetail({ entry, onOpen, onOpenDeck, onBack }: Props) {
         <section className="block">
           <div className="block-head">
             <h3>In your decks</h3>
-            <SourceTag>Archidekt</SourceTag>
+            <SourceTag>Scryfall card data</SourceTag>
           </div>
           <ul className="entry-list">
             {uses.map(({ deck, cards }) => (

@@ -84,8 +84,7 @@ describe('Decks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Decks' }))
     expect(window.location.hash).toBe('#/decks')
     const list = screen.getByRole('region', { name: 'Decks' })
-    const first = within(list).getAllByRole('button')[0]
-    fireEvent.click(first)
+    fireEvent.click(within(list).getByRole('button', { name: /Eldrazi Storm/ }))
     expect(window.location.hash).toMatch(/^#\/decks\/\d+$/)
     const deckPane = screen.getByRole('region', { name: 'Deck' })
     expect(within(deckPane).getByText('Keyword ability', { exact: false })).toBeInTheDocument()
@@ -103,5 +102,72 @@ describe('Decks', () => {
     render(<App />)
     const entry = screen.getByRole('region', { name: 'Entry' })
     expect(within(entry).getByText('In your decks')).toBeInTheDocument()
+  })
+})
+
+describe('Deck import', () => {
+  /** A Scryfall collection answer for whatever names were asked for. */
+  const collection = (names: string[]) =>
+    new Response(
+      JSON.stringify({
+        data: names.map((name, i) => ({
+          id: `id-${i}`,
+          name,
+          type_line: 'Creature',
+          scryfall_uri: '',
+          set: 'xxx',
+          collector_number: String(i),
+          keywords:
+            name === 'Ornithopter'
+              ? ['Flying']
+              : name === 'Ninja of the Deep Hours'
+                ? ['Ninjutsu']
+                : [],
+          image_uris: { art_crop: `https://cards/${i}.jpg` },
+        })),
+        not_found: [],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+
+  beforeEach(() => {
+    window.location.hash = '#/decks/import'
+    localStorage.clear()
+    indexedDB.deleteDatabase('mtg-codex')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, init?: RequestInit) => {
+        if (String(url).includes('/cards/collection')) {
+          const body = JSON.parse(String(init?.body)) as { identifiers: Array<{ name: string }> }
+          return Promise.resolve(collection(body.identifiers.map((i) => i.name)))
+        }
+        return emptySearch()
+      }),
+    )
+    Element.prototype.scrollTo = vi.fn()
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('pastes a list, looks it up and saves the deck on the device', async () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: 'Decklist' }), {
+      target: {
+        value:
+          'Commander\n1 Yuriko, the Tiger\u2019s Shadow\n\nDeck\n1 Ornithopter\n1 Ninja of the Deep Hours\n30 Island',
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Look up 4 cards/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Save deck' }))
+
+    const deckPane = screen.getByRole('region', { name: 'Deck' })
+    expect(within(deckPane).getByRole('heading', { level: 1, name: 'Yuriko' })).toBeInTheDocument()
+    expect(within(deckPane).getByText('Flying')).toBeInTheDocument()
+    expect(within(deckPane).getByText('Ninjutsu')).toBeInTheDocument()
+    expect(within(deckPane).getByText(/33 cards/)).toBeInTheDocument()
+    expect(within(deckPane).getByRole('button', { name: /Remove deck/ })).toBeInTheDocument()
+    expect(window.location.hash).toMatch(/^#\/decks\/imported-/)
   })
 })

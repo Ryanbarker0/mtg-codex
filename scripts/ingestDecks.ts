@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Codex } from '../src/lib/codex.ts'
-import type { Deck, DeckKeyword, DecksData } from '../src/lib/decks.ts'
+import { deckKeywords, type Deck, type DecksData } from '../src/lib/decks.ts'
 import {
   ARCHIDEKT,
   deckUrl,
@@ -81,33 +81,6 @@ async function keywordsByCard(cards: DeckCard[]): Promise<Map<string, string[]>>
   return result
 }
 
-/** Groups a deck's cards by keyword and maps each keyword to its codex entry. */
-export function deckKeywords(
-  cards: DeckCard[],
-  keywords: Map<string, string[]>,
-  entryIdByKeyword: Map<string, string>,
-  unknown: Set<string>,
-): DeckKeyword[] {
-  const groups = new Map<string, string[]>()
-  for (const card of cards) {
-    for (const keyword of keywords.get(card.uid) ?? []) {
-      const list = groups.get(keyword) ?? []
-      if (!list.includes(card.name)) list.push(card.name)
-      groups.set(keyword, list)
-    }
-  }
-  const result: DeckKeyword[] = []
-  for (const [keyword, names] of groups) {
-    const entryId = entryIdByKeyword.get(keyword.toLowerCase())
-    if (!entryId) {
-      unknown.add(keyword)
-      continue
-    }
-    result.push({ entryId, keyword, cards: names })
-  }
-  return result.sort((a, b) => a.keyword.localeCompare(b.keyword))
-}
-
 async function main() {
   const codex = JSON.parse(await readFile(CODEX, 'utf8')) as Codex
   const entryIdByKeyword = new Map(
@@ -128,16 +101,20 @@ async function main() {
     const deck = await fetchJson<ArchidektDeck>(`${ARCHIDEKT}/api/decks/${summary.id}/`)
     const cards = includedCards(deck)
     const keywords = await keywordsByCard(cards)
-    const grouped = deckKeywords(cards, keywords, entryIdByKeyword, unknown)
+    const grouped = deckKeywords(
+      cards.map((c) => ({ name: c.name, keywords: keywords.get(c.uid) ?? [] })),
+      entryIdByKeyword,
+      unknown,
+    )
     const cardCount = cards.reduce((n, c) => n + c.quantity, 0)
     const commanders = cards.filter((c) => c.isCommander).map((c) => c.name)
     console.log(
       `  ${deck.name}: ${cardCount} cards, ${commanders.join(' / ') || 'no commander category'}, ${grouped.length} keywords`,
     )
     decks.push({
-      id: deck.id,
+      id: String(deck.id),
       name: deck.name,
-      url: deckUrl(deck.id),
+      source: { kind: 'built-in', url: deckUrl(deck.id) },
       ...(deck.featured ? { art: deck.featured } : {}),
       commanders,
       cardCount,

@@ -1,14 +1,70 @@
 import type { Deck } from '../lib/decks'
 
 interface Props {
-  decks: Deck[]
-  selectedId: number | null
-  onOpen: (id: number) => void
+  userDecks: Deck[]
+  builtInDecks: Deck[]
+  builtInLabel: string
+  showBuiltIn: boolean
+  onToggleBuiltIn: () => void
+  selectedId: string | null
+  onOpen: (id: string) => void
+  onImport: () => void
 }
 
-/** One tile per deck, with its featured art. */
-export function DeckList({ decks, selectedId, onOpen }: Props) {
-  if (decks.length === 0) return <div className="empty">No decks in the folder.</div>
+/** Decks imported on this device first, then the built-in presets, which can be hidden. */
+export function DeckList({
+  userDecks,
+  builtInDecks,
+  builtInLabel,
+  showBuiltIn,
+  onToggleBuiltIn,
+  selectedId,
+  onOpen,
+  onImport,
+}: Props) {
+  return (
+    <div className="stackable" style={{ gap: 18 }}>
+      <section className="deck-section">
+        <div className="block-head">
+          <h3>Your decks</h3>
+          <button className="chip" onClick={onImport}>
+            + Add deck
+          </button>
+        </div>
+        {userDecks.length === 0 ? (
+          <div className="empty">
+            Paste a decklist from Archidekt or Moxfield to see every mechanic in it. Decks stay on
+            this device.
+          </div>
+        ) : (
+          <Tiles decks={userDecks} selectedId={selectedId} onOpen={onOpen} />
+        )}
+      </section>
+
+      {builtInDecks.length > 0 && (
+        <section className="deck-section">
+          <div className="block-head">
+            <h3>{builtInLabel}</h3>
+            <button className="chip" onClick={onToggleBuiltIn}>
+              {showBuiltIn ? 'Hide' : `Show ${builtInDecks.length}`}
+            </button>
+          </div>
+          {showBuiltIn && <Tiles decks={builtInDecks} selectedId={selectedId} onOpen={onOpen} />}
+        </section>
+      )}
+    </div>
+  )
+}
+
+function Tiles({
+  decks,
+  selectedId,
+  onOpen,
+}: {
+  decks: Deck[]
+  selectedId: string | null
+  onOpen: (id: string) => void
+}) {
   return (
     <ul className="deck-list">
       {decks.map((deck) => (
@@ -18,10 +74,16 @@ export function DeckList({ decks, selectedId, onOpen }: Props) {
             aria-current={deck.id === selectedId ? 'page' : undefined}
             onClick={() => onOpen(deck.id)}
           >
-            {deck.art && <img className="deck-art" src={deck.art} alt="" loading="lazy" />}
+            {deck.art ? (
+              <img className="deck-art" src={deck.art} alt="" loading="lazy" />
+            ) : (
+              <span className="deck-art" />
+            )}
             <span className="deck-tile-body">
               <strong>{deck.name}</strong>
-              <span className="muted">{deck.commanders.join(' / ')}</span>
+              {deck.commanders.length > 0 && (
+                <span className="muted">{deck.commanders.join(' / ')}</span>
+              )}
               <span className="faint small">
                 {deck.cardCount} cards · {deck.keywords.length} mechanics
               </span>
