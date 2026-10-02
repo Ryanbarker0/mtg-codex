@@ -11,7 +11,7 @@ interface Props {
   onImport: () => void
 }
 
-/** Decks imported on this device first, then the built-in presets, which can be hidden. */
+/** Decks imported on this device, then the built-in presets, which stay hidden until asked for. */
 export function DeckList({
   userDecks,
   builtInDecks,
@@ -41,16 +41,21 @@ export function DeckList({
         )}
       </section>
 
-      {builtInDecks.length > 0 && (
+      {builtInDecks.length > 0 && showBuiltIn && (
         <section className="deck-section">
           <div className="block-head">
             <h3>{builtInLabel}</h3>
             <button className="chip" onClick={onToggleBuiltIn}>
-              {showBuiltIn ? 'Hide' : `Show ${builtInDecks.length}`}
+              Hide
             </button>
           </div>
-          {showBuiltIn && <Tiles decks={builtInDecks} selectedId={selectedId} onOpen={onOpen} />}
+          <Tiles decks={builtInDecks} selectedId={selectedId} onOpen={onOpen} />
         </section>
+      )}
+      {builtInDecks.length > 0 && !showBuiltIn && (
+        <button className="ghost built-in-toggle" onClick={onToggleBuiltIn}>
+          Show {builtInDecks.length} built-in decks ({builtInLabel})
+        </button>
       )}
     </div>
   )

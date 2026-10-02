@@ -25,11 +25,12 @@ const FILTERS: Array<{ value: KindFilter; label: string }> = [
 const index = indexEntries(codex.entries)
 const BUILT_IN_KEY = 'mtg-codex:show-built-in-decks'
 
+/** The built-in decks are hidden unless this device has asked for them: the app is a codex first. */
 function loadShowBuiltIn(): boolean {
   try {
-    return localStorage.getItem(BUILT_IN_KEY) !== 'false'
+    return localStorage.getItem(BUILT_IN_KEY) === 'true'
   } catch {
-    return true
+    return false
   }
 }
 

@@ -84,6 +84,9 @@ describe('Decks', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Decks' }))
     expect(window.location.hash).toBe('#/decks')
     const list = screen.getByRole('region', { name: 'Decks' })
+    // Built-in decks are hidden until asked for; the codex comes first.
+    expect(within(list).queryByRole('button', { name: /Eldrazi Storm/ })).not.toBeInTheDocument()
+    fireEvent.click(within(list).getByRole('button', { name: /Show 10 built-in decks/ }))
     fireEvent.click(within(list).getByRole('button', { name: /Eldrazi Storm/ }))
     expect(window.location.hash).toMatch(/^#\/decks\/\d+$/)
     const deckPane = screen.getByRole('region', { name: 'Deck' })

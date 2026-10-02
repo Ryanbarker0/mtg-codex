@@ -21,7 +21,7 @@ Every block of text names its source, and the definitions are quoted rather than
   Tap a mechanic to read its entry, and every entry shows which of your decks use it.
 - Add your own decks by pasting the text export from Archidekt or Moxfield.
   Cards are looked up on Scryfall in the browser and the deck is kept in IndexedDB on the device, so nothing is hosted and nothing leaves the device.
-  A set of built-in decks ships with the app and can be hidden.
+  A set of built-in decks ships with the app but stays hidden until a device asks for it, so for everyone else the app is a codex first.
 
 ## Where the data comes from
 
