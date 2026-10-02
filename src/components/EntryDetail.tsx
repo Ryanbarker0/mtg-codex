@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Entry } from '../lib/codex'
 import { codex, entriesById, ruleNode } from '../lib/codexData'
+import { decksUsing } from '../lib/decksData'
 import type { ExampleCard } from '../lib/scryfall'
 import { CardImage } from './CardImage'
 import { ExampleCardsBlock } from './ExampleCards'
@@ -12,18 +13,20 @@ import { SourceTag } from './SourceTag'
 interface Props {
   entry: Entry
   onOpen: (id: string) => void
+  onOpenDeck: (id: number) => void
   onBack: () => void
 }
 
 const RULES_SOURCE = `Comprehensive Rules, ${codex.comprehensiveRules.effectiveDate}`
 
-export function EntryDetail({ entry, onOpen, onBack }: Props) {
+export function EntryDetail({ entry, onOpen, onOpenDeck, onBack }: Props) {
   const [card, setCard] = useState<ExampleCard | null>(null)
   const wiki = entry.wiki
   const related = entry.related
     .map((id) => entriesById.get(id))
     .filter((e): e is Entry => e !== undefined)
   const sections = entry.ruleNumbers.map((n) => ({ number: n, node: ruleNode(n) }))
+  const uses = decksUsing(entry.id)
   const hasRules = sections.some((s) => s.node && !s.node.omitted)
 
   const metaParts: string[] = []
@@ -128,6 +131,30 @@ export function EntryDetail({ entry, onOpen, onBack }: Props) {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {uses.length > 0 && (
+        <section className="block">
+          <div className="block-head">
+            <h3>In your decks</h3>
+            <SourceTag>Archidekt</SourceTag>
+          </div>
+          <ul className="entry-list">
+            {uses.map(({ deck, cards }) => (
+              <li key={deck.id}>
+                <button className="entry-row" onClick={() => onOpenDeck(deck.id)}>
+                  <span className="entry-row-head">
+                    <strong>{deck.name}</strong>
+                    <span className="count">
+                      {cards.length} {cards.length === 1 ? 'card' : 'cards'}
+                    </span>
+                  </span>
+                  <span className="entry-row-cards">{cards.join(', ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

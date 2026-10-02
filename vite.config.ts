@@ -54,6 +54,17 @@ export default defineConfig({
             },
           },
           {
+            // Deck art from Archidekt, cached like card images.
+            urlPattern:
+              /^https:\/\/(card-images\.archidekt\.com|storage\.googleapis\.com\/archidekt-card-images)\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'archidekt-art',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
             // Card images: cache first so an entry viewed once works offline.
             urlPattern: /^https:\/\/cards\.scryfall\.io\/.*/i,
             handler: 'CacheFirst',

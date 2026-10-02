@@ -713,3 +713,137 @@ a.source:hover {
     padding: 16px;
   }
 }
+
+/* Section switcher */
+
+.segments {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+}
+
+.segments button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.segments button.on {
+  background: var(--accent);
+  color: white;
+}
+
+/* Decks */
+
+.deck-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+}
+
+.deck-tile {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  text-align: left;
+  white-space: normal;
+}
+
+.deck-tile.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.deck-art {
+  width: 72px;
+  height: 100%;
+  min-height: 72px;
+  object-fit: cover;
+  background: var(--bg-overlay);
+}
+
+.deck-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 10px 0;
+  min-width: 0;
+}
+
+.deck-tile-body strong {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.deck-tile-body .muted {
+  font-size: 13.5px;
+}
+
+.deck-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 20px;
+}
+
+.deck-banner {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  background: var(--bg-overlay);
+}
+
+.deck-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deck-head h1 {
+  font-size: 26px;
+}
+
+.count {
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.entry-row-cards {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+@media (max-width: 899px) {
+  .topbar .title small {
+    display: none;
+  }
+
+  .deck-head {
+    padding-top: 8px;
+  }
+
+  .deck-banner {
+    height: 120px;
+  }
+}

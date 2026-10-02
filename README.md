@@ -17,6 +17,9 @@ Every block of text names its source, and the definitions are quoted rather than
 - Entries have shareable addresses, and the browser back gesture closes them.
 - Installs as a standalone app and works offline once loaded.
   Example cards are cached after the first view.
+- A Decks section lists the decks in an Archidekt folder.
+  Open a deck to see every mechanic in it, grouped by kind, with the cards that carry each one.
+  Tap a mechanic to read its entry, and every entry shows which of the decks use it.
 
 ## Where the data comes from
 
@@ -41,6 +44,16 @@ The script logs every link it makes.
 Where a source has nothing, the entry says so rather than filling the gap.
 Arena-only mechanics, for instance, have a wiki summary and example cards but no rules text, and the entry states that the current rules have no entry under that name.
 
+## Where the decks come from
+
+`npm run ingest:decks` writes `src/data/decks.json` from an Archidekt folder, by default [folder 1553499](https://archidekt.com/folders/1553499).
+Set `ARCHIDEKT_FOLDER` to use another.
+Archidekt does not allow browser requests from other origins, so this happens at build time and the output is committed.
+
+For each deck the script reads the deck from Archidekt's API, keeps the cards in categories Archidekt marks as included in the deck, and looks every card up on Scryfall by its Scryfall id.
+Scryfall's `keywords` field for a card lists the keyword abilities, keyword actions and ability words on it, with the same names as the codex, so each one maps to an entry by exact name.
+Scryfall also lists flavor words there, such as "Grand Summon"; those have no entry and the script reports them as left out.
+
 ## Refreshing the data
 
 ```sh
@@ -49,6 +62,12 @@ npm run ingest
 
 Run it after a new set releases or the rules are updated, then review the diff of `src/data/codex.json` and commit it.
 The script prints the rules' effective date, the counts from each source, every variant link it made, and any keyword that ended up without rules text or a wiki page.
+
+```sh
+npm run ingest:decks
+```
+
+Run it after changing a deck on Archidekt, then review the diff of `src/data/decks.json` and commit it.
 
 ## Running locally
 
@@ -81,10 +100,11 @@ The app installs as a standalone PWA and updates itself on the next launch after
 - `scripts/ingest.ts` builds the codex from the three sources.
 - `scripts/lib/comprehensiveRules.ts` parses the rules text file into a tree of rules plus the glossary.
 - `scripts/lib/wiki.ts` talks to the wiki's API and parses infoboxes.
-- `src/lib/codex.ts` is the shape of the generated data, shared by the script and the app.
+- `scripts/ingestDecks.ts` builds the deck data from an Archidekt folder, with `scripts/lib/archidekt.ts` reading Archidekt's pages and API.
+- `src/lib/codex.ts` and `src/lib/decks.ts` are the shapes of the generated data, shared by the scripts and the app.
 - `src/lib/search.ts` ranks entries for a query.
 - `src/lib/scryfall.ts` fetches example cards.
-- `src/components/` holds the list, the entry view, the rules renderer and the card viewer.
+- `src/components/` holds the list, the entry view, the rules renderer, the card viewer and the deck screens.
 
 ## Notices
 

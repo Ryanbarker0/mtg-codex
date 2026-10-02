@@ -66,3 +66,42 @@ describe('App', () => {
     expect(screen.getByText(/Nothing matches/)).toBeInTheDocument()
   })
 })
+
+describe('Decks', () => {
+  beforeEach(() => {
+    window.location.hash = ''
+    localStorage.clear()
+    vi.stubGlobal('fetch', vi.fn(emptySearch))
+    Element.prototype.scrollTo = vi.fn()
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('lists the decks and shows the mechanics of one', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Decks' }))
+    expect(window.location.hash).toBe('#/decks')
+    const list = screen.getByRole('region', { name: 'Decks' })
+    const first = within(list).getAllByRole('button')[0]
+    fireEvent.click(first)
+    expect(window.location.hash).toMatch(/^#\/decks\/\d+$/)
+    const deckPane = screen.getByRole('region', { name: 'Deck' })
+    expect(within(deckPane).getByText('Keyword ability', { exact: false })).toBeInTheDocument()
+    // Tapping a mechanic opens its codex entry.
+    const row = within(deckPane)
+      .getAllByRole('button')
+      .find((b) => b.className === 'entry-row')
+    fireEvent.click(row!)
+    expect(window.location.hash).toMatch(/^#\/e\//)
+    expect(screen.getByRole('region', { name: 'Entry' })).toBeInTheDocument()
+  })
+
+  it('shows which decks use an entry', () => {
+    window.location.hash = '#/e/flying'
+    render(<App />)
+    const entry = screen.getByRole('region', { name: 'Entry' })
+    expect(within(entry).getByText('In your decks')).toBeInTheDocument()
+  })
+})
