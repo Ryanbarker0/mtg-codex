@@ -10,8 +10,8 @@ Every block of text names its source, and the definitions are quoted rather than
 
 - Search by name, or by words in the reminder text, glossary and summary.
   Matches on the name rank first.
-- Filter to keyword abilities, keyword actions, ability words, rules terms, or everything.
-  A typed search also lists matches from the kinds the filter leaves out, so a rules term is never hidden by the filter.
+- Everything is searched by default.
+  Filters narrow to keyword abilities, keyword actions, ability words or rules terms, and a typed search still lists matches from the kinds a filter leaves out.
 - Each entry shows, in order: reminder text, the Comprehensive Rules glossary line, a plain-English summary, the full rules text of its section with examples, related entries, and example cards from Scryfall ordered by how often they are played in Commander.
 - Rule references inside the text ("see rule 702.74") link to the entry that section defines.
 - Recently opened entries are kept on the device for quick access during a game.

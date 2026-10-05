@@ -17,12 +17,12 @@ import { indexEntries, search, type KindFilter } from './lib/search'
 import { useUserDecks } from './state/useUserDecks'
 
 const FILTERS: Array<{ value: KindFilter; label: string }> = [
+  { value: 'all', label: 'All' },
   { value: 'keywords', label: 'Keywords' },
   { value: 'keyword-ability', label: 'Abilities' },
   { value: 'keyword-action', label: 'Actions' },
   { value: 'ability-word', label: 'Ability words' },
   { value: 'term', label: 'Rules terms' },
-  { value: 'all', label: 'Everything' },
 ]
 
 const index = indexEntries(codex.entries)
@@ -30,7 +30,8 @@ const index = indexEntries(codex.entries)
 export default function App() {
   const { route, navigate, back } = useRoute()
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<KindFilter>('keywords')
+  // Everything by default: at the table it is rarely obvious whether a word is a keyword or a rules term.
+  const [filter, setFilter] = useState<KindFilter>('all')
   // An entry opened by address (a shared link, or the app reopening on one) counts as recent too.
   const [recent, setRecent] = useState<string[]>(() =>
     route.view === 'codex' && route.entryId && entriesById.has(route.entryId)

@@ -66,8 +66,18 @@ describe('App', () => {
     expect(screen.getByText(/Nothing matches/)).toBeInTheDocument()
   })
 
-  it('finds a rules term while the Keywords filter is on', () => {
+  it('searches everything by default', () => {
     render(<App />)
+    expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'modified' } })
+    const pane = screen.getByRole('region', { name: 'Search' })
+    expect(within(pane).getAllByRole('button', { name: /^Modified/ })[0]).toBeInTheDocument()
+    expect(within(pane).queryByText(/Found outside/)).not.toBeInTheDocument()
+  })
+
+  it('still finds a rules term while the Keywords filter is on', () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('radio', { name: 'Keywords' }))
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'modified' } })
     const pane = screen.getByRole('region', { name: 'Search' })
     expect(within(pane).getByText(/Nothing in Keywords matches/)).toBeInTheDocument()
