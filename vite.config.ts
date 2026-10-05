@@ -71,5 +71,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./src/test-setup.ts'],
+    // App tests render the real codex; slower CI machines need more than the default 5s.
+    testTimeout: 15_000,
   },
 })

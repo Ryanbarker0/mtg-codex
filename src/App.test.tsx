@@ -66,6 +66,18 @@ describe('App', () => {
     expect(screen.getByText(/Nothing matches/)).toBeInTheDocument()
   })
 
+  it('renders the long list a page at a time', () => {
+    render(<App />)
+    const pane = screen.getByRole('region', { name: 'Search' })
+    expect(within(pane).getByText(/^836 entries$/)).toBeInTheDocument()
+    expect(within(pane).getAllByRole('listitem')).toHaveLength(100)
+    fireEvent.click(within(pane).getByRole('button', { name: /^Show 100 more of 736/ }))
+    expect(within(pane).getAllByRole('listitem')).toHaveLength(200)
+    // Typing resets to the first page of the new results.
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'walk' } })
+    expect(within(pane).queryByRole('button', { name: /^Show/ })).not.toBeInTheDocument()
+  })
+
   it('searches everything by default', () => {
     render(<App />)
     expect(screen.getByRole('radio', { name: 'All' })).toBeChecked()

@@ -26,6 +26,8 @@ const FILTERS: Array<{ value: KindFilter; label: string }> = [
 ]
 
 const index = indexEntries(codex.entries)
+/** Rows rendered before a "Show more" button; a typed search rarely needs more than this. */
+const PAGE = 100
 
 export default function App() {
   const { route, navigate, back } = useRoute()
@@ -51,6 +53,15 @@ export default function App() {
   const showingDetail = entryId !== null || deckId !== null || importing
 
   const results = useMemo(() => search(index, query, filter), [query, filter])
+  // Long lists render a page at a time; the page resets whenever the query or filter changes.
+  const [pages, setPages] = useState(1)
+  const listKey = `${filter}|${query}`
+  const [pagedKey, setPagedKey] = useState(listKey)
+  if (pagedKey !== listKey) {
+    setPagedKey(listKey)
+    setPages(1)
+  }
+  const shown = results.slice(0, pages * PAGE)
   // A typed query also searches the kinds the filter leaves out, so a rules term such as
   // Modified is found even while browsing keywords; those matches are listed separately.
   const elsewhere = useMemo(() => {
@@ -185,11 +196,17 @@ export default function App() {
                 {results.length.toLocaleString()} {results.length === 1 ? 'entry' : 'entries'}
               </div>
               <EntryList
-                entries={results}
+                entries={shown}
                 selectedId={entry?.id ?? null}
                 onOpen={openEntry}
                 emptyMessage={emptyMessage}
               />
+              {shown.length < results.length && (
+                <button className="show-more" onClick={() => setPages((n) => n + 1)}>
+                  Show {Math.min(PAGE, results.length - shown.length).toLocaleString()} more of{' '}
+                  {(results.length - shown.length).toLocaleString()}
+                </button>
+              )}
               {elsewhere.length > 0 && (
                 <div className="elsewhere">
                   <h3>
