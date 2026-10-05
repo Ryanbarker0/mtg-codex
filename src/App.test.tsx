@@ -65,6 +65,18 @@ describe('App', () => {
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzzzzz' } })
     expect(screen.getByText(/Nothing matches/)).toBeInTheDocument()
   })
+
+  it('finds a rules term while the Keywords filter is on', () => {
+    render(<App />)
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'modified' } })
+    const pane = screen.getByRole('region', { name: 'Search' })
+    expect(within(pane).getByText(/Nothing in Keywords matches/)).toBeInTheDocument()
+    expect(within(pane).getByText(/Found outside Keywords/)).toBeInTheDocument()
+    fireEvent.click(within(pane).getByRole('button', { name: /^Modified/ }))
+    const entry = screen.getByRole('region', { name: 'Entry' })
+    expect(within(entry).getByRole('heading', { level: 1, name: 'Modified' })).toBeInTheDocument()
+    expect(within(entry).getByText(/^700\.9/)).toBeInTheDocument()
+  })
 })
 
 describe('Deck import', () => {

@@ -953,3 +953,12 @@ button:disabled {
   display: block;
   background: var(--bg-overlay);
 }
+
+.elsewhere {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}

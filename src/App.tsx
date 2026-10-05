@@ -50,6 +50,13 @@ export default function App() {
   const showingDetail = entryId !== null || deckId !== null || importing
 
   const results = useMemo(() => search(index, query, filter), [query, filter])
+  // A typed query also searches the kinds the filter leaves out, so a rules term such as
+  // Modified is found even while browsing keywords; those matches are listed separately.
+  const elsewhere = useMemo(() => {
+    if (query.trim() === '' || filter === 'all') return []
+    const shown = new Set(results.map((e) => e.id))
+    return search(index, query, 'all').filter((e) => !shown.has(e.id))
+  }, [query, filter, results])
 
   // The page title follows what is open so the browser history reads well, and a new page
   // starts at the top rather than wherever the last one was scrolled to.
@@ -75,10 +82,13 @@ export default function App() {
     inputRef.current?.blur()
   }
 
+  const activeFilter = FILTERS.find((f) => f.value === filter)?.label ?? 'this filter'
   const emptyMessage =
     query.trim() === ''
       ? 'Nothing to list.'
-      : `Nothing matches “${query.trim()}”${filter === 'all' ? '' : ' in this filter'}.`
+      : elsewhere.length > 0
+        ? `Nothing in ${activeFilter} matches “${query.trim()}”.`
+        : `Nothing matches “${query.trim()}”.`
 
   return (
     <div className={`app${showingDetail ? ' showing-detail' : ''}`}>
@@ -179,6 +189,20 @@ export default function App() {
                 onOpen={openEntry}
                 emptyMessage={emptyMessage}
               />
+              {elsewhere.length > 0 && (
+                <div className="elsewhere">
+                  <h3>
+                    {results.length === 0 ? 'Found outside' : 'Also outside'} {activeFilter} ·{' '}
+                    {elsewhere.length}
+                  </h3>
+                  <EntryList
+                    entries={elsewhere}
+                    selectedId={entry?.id ?? null}
+                    onOpen={openEntry}
+                    emptyMessage=""
+                  />
+                </div>
+              )}
             </div>
           </section>
 
