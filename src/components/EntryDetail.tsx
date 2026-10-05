@@ -144,16 +144,21 @@ export function EntryDetail({ entry, decks, onOpen, onOpenDeck, onBack }: Props)
             <SourceTag>Scryfall card data</SourceTag>
           </div>
           <ul className="entry-list">
-            {uses.map(({ deck, cards }) => (
+            {uses.map(({ deck, cards, mentionedBy }) => (
               <li key={deck.id}>
                 <button className="entry-row" onClick={() => onOpenDeck(deck.id)}>
                   <span className="entry-row-head">
                     <strong>{deck.name}</strong>
                     <span className="count">
-                      {cards.length} {cards.length === 1 ? 'card' : 'cards'}
+                      {cards.length > 0
+                        ? `${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`
+                        : 'named in text'}
                     </span>
                   </span>
-                  <span className="entry-row-cards">{cards.join(', ')}</span>
+                  {cards.length > 0 && <span className="entry-row-cards">{cards.join(', ')}</span>}
+                  {mentionedBy.length > 0 && (
+                    <span className="entry-row-cards">Named on {mentionedBy.join(', ')}</span>
+                  )}
                 </button>
               </li>
             ))}

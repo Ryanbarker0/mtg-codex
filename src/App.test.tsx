@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
-/** Scryfall is not reached in tests; every search comes back empty. */
+/** Scryfall is not reached in tests; every card search comes back empty. */
 const emptySearch = () =>
   Promise.resolve(
     new Response(JSON.stringify({ total_cards: 0, data: [] }), {
@@ -85,6 +85,10 @@ describe('Deck import', () => {
               : name === 'Ninja of the Deep Hours'
                 ? ['Ninjutsu']
                 : [],
+          oracle_text:
+            name === 'Zhulodok, Void Gorger'
+              ? 'Colorless spells you cast from your hand with mana value 7 or greater have "Cascade, cascade." (When you cast one, exile cards.)'
+              : '',
           image_uris: { art_crop: `https://cards/${i}.jpg` },
         })),
         not_found: [],
@@ -118,17 +122,23 @@ describe('Deck import', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Decklist' }), {
       target: {
         value:
-          'Commander\n1 Yuriko, the Tiger\u2019s Shadow\n\nDeck\n1 Ornithopter\n1 Ninja of the Deep Hours\n30 Island',
+          'Commander\n1 Yuriko, the Tiger’s Shadow\n\nDeck\n1 Ornithopter\n1 Ninja of the Deep Hours\n1 Zhulodok, Void Gorger\n30 Island',
       },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Look up 4 cards/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Look up 5 cards/ }))
     fireEvent.click(await screen.findByRole('button', { name: 'Save deck' }))
 
     const deckPane = screen.getByRole('region', { name: 'Deck' })
     expect(within(deckPane).getByRole('heading', { level: 1, name: 'Yuriko' })).toBeInTheDocument()
     expect(within(deckPane).getByText('Flying')).toBeInTheDocument()
     expect(within(deckPane).getByText('Ninjutsu')).toBeInTheDocument()
-    expect(within(deckPane).getByText(/33 cards/)).toBeInTheDocument()
+    expect(within(deckPane).getByText(/34 cards/)).toBeInTheDocument()
+    // Zhulodok grants cascade without having it, so it shows under the named-in-text group.
+    expect(within(deckPane).getByText(/Granted or named in card text/)).toBeInTheDocument()
+    expect(within(deckPane).getByText('Cascade')).toBeInTheDocument()
+    expect(
+      within(deckPane).getByRole('button', { name: /Check cards on Scryfall again/ }),
+    ).toBeInTheDocument()
     expect(within(deckPane).getByRole('button', { name: /Remove deck/ })).toBeInTheDocument()
     expect(window.location.hash).toMatch(/^#\/decks\/imported-/)
 
@@ -137,10 +147,10 @@ describe('Deck import', () => {
     const list = screen.getByRole('region', { name: 'Decks' })
     expect(within(list).getByRole('button', { name: /^Yuriko/ })).toBeInTheDocument()
     fireEvent.click(within(list).getByRole('button', { name: /^Yuriko/ }))
-    fireEvent.click(within(screen.getByRole('region', { name: 'Deck' })).getByText('Flying'))
+    fireEvent.click(within(screen.getByRole('region', { name: 'Deck' })).getByText('Cascade'))
     const entry = screen.getByRole('region', { name: 'Entry' })
     expect(within(entry).getByText('In your decks')).toBeInTheDocument()
-    expect(within(entry).getByRole('button', { name: /^Yuriko/ })).toBeInTheDocument()
+    expect(within(entry).getByText(/Named on Zhulodok/)).toBeInTheDocument()
   })
 
   it('starts with no decks', () => {

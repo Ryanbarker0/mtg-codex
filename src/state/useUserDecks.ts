@@ -25,10 +25,14 @@ export function useUserDecks() {
   }, [])
 
   const addDeck = useCallback((deck: Deck) => persist([deck, ...decks]), [decks, persist])
+  const updateDeck = useCallback(
+    (deck: Deck) => persist(decks.map((d) => (d.id === deck.id ? deck : d))),
+    [decks, persist],
+  )
   const removeDeck = useCallback(
     (id: string) => persist(decks.filter((d) => d.id !== id)),
     [decks, persist],
   )
 
-  return { decks, loaded, addDeck, removeDeck }
+  return { decks, loaded, addDeck, updateDeck, removeDeck }
 }

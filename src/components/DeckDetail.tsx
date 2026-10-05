@@ -9,6 +9,8 @@ import { SourceTag } from './SourceTag'
 interface Props {
   deck: Deck
   onOpenEntry: (id: string) => void
+  /** Resolves the deck's list on Scryfall again. Absent for decks saved without their list. */
+  onRefresh?: () => Promise<void>
   onRemove: () => void
   onBack: () => void
 }
@@ -21,8 +23,9 @@ interface Row {
 }
 
 /** Every mechanic in a deck, grouped by kind, with the cards that carry it. */
-export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
+export function DeckDetail({ deck, onOpenEntry, onRefresh, onRemove, onBack }: Props) {
   const [confirming, setConfirming] = useState(false)
+  const [refreshing, setRefreshing] = useState<'idle' | 'busy' | 'failed'>('idle')
   useEffect(() => {
     if (!confirming) return
     const timer = window.setTimeout(() => setConfirming(false), 4000)
@@ -33,16 +36,27 @@ export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
     const entry = entriesById.get(keyword.entryId)
     return entry ? [{ entry, keyword }] : []
   })
+  const byCount = (a: Row, b: Row) =>
+    b.keyword.cards.length - a.keyword.cards.length ||
+    (b.keyword.mentionedBy?.length ?? 0) - (a.keyword.mentionedBy?.length ?? 0) ||
+    a.entry.name.localeCompare(b.entry.name)
+  // Keywords some card has, by kind; then keywords only granted or named in rules text.
   const groups = KIND_ORDER.map((kind) => ({
     kind,
-    rows: rows
-      .filter((r) => r.entry.kind === kind)
-      .sort(
-        (a, b) =>
-          b.keyword.cards.length - a.keyword.cards.length ||
-          a.entry.name.localeCompare(b.entry.name),
-      ),
+    rows: rows.filter((r) => r.entry.kind === kind && r.keyword.cards.length > 0).sort(byCount),
   })).filter((g) => g.rows.length > 0)
+  const named = rows.filter((r) => r.keyword.cards.length === 0).sort(byCount)
+
+  const refresh = async () => {
+    if (!onRefresh) return
+    setRefreshing('busy')
+    try {
+      await onRefresh()
+      setRefreshing('idle')
+    } catch {
+      setRefreshing('failed')
+    }
+  }
 
   const imported = new Date(deck.importedAt)
 
@@ -102,6 +116,11 @@ export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
                   </span>
                   <span className="entry-row-snippet">{snippet(entry)}</span>
                   <span className="entry-row-cards">{keyword.cards.join(', ')}</span>
+                  {keyword.mentionedBy && keyword.mentionedBy.length > 0 && (
+                    <span className="entry-row-cards">
+                      Also named on {keyword.mentionedBy.join(', ')}
+                    </span>
+                  )}
                 </button>
               </li>
             ))}
@@ -109,7 +128,45 @@ export function DeckDetail({ deck, onOpenEntry, onRemove, onBack }: Props) {
         </section>
       ))}
 
-      <div className="row">
+      {named.length > 0 && (
+        <section className="block">
+          <div className="block-head">
+            <h3>Granted or named in card text{named.length > 1 ? ` · ${named.length}` : ''}</h3>
+            <SourceTag>Scryfall oracle text</SourceTag>
+          </div>
+          <p className="faint small">
+            No card here has these, but their rules text names them, so they can come up.
+          </p>
+          <ul className="entry-list">
+            {named.map(({ entry, keyword }) => (
+              <li key={entry.id}>
+                <button className="entry-row" onClick={() => onOpenEntry(entry.id)}>
+                  <span className="entry-row-head">
+                    <strong>{entry.name}</strong>
+                    <span className="count">
+                      {keyword.mentionedBy?.length ?? 0}{' '}
+                      {keyword.mentionedBy?.length === 1 ? 'card' : 'cards'}
+                    </span>
+                  </span>
+                  <span className="entry-row-snippet">{snippet(entry)}</span>
+                  <span className="entry-row-cards">{keyword.mentionedBy?.join(', ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <div className="row wrap">
+        {onRefresh && (
+          <button className="ghost" onClick={refresh} disabled={refreshing === 'busy'}>
+            {refreshing === 'busy'
+              ? 'Checking cards on Scryfall…'
+              : 'Check cards on Scryfall again'}
+          </button>
+        )}
+        {refreshing === 'failed' && <span className="notice error">Could not reach Scryfall.</span>}
+        <span className="spacer" />
         <button
           className={confirming ? 'danger' : 'ghost'}
           onClick={() => {

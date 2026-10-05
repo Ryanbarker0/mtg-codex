@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { parseDecklist } from '../lib/decklist'
 import type { Deck } from '../lib/decks'
-import { entryIdByKeyword } from '../lib/decksData'
+import { entryIdByKeyword, textKeywords } from '../lib/decksData'
 import { buildImportedDeck } from '../lib/importDeck'
 import { lookupDecklist } from '../lib/scryfall'
 
@@ -35,7 +35,7 @@ export function DeckImport({ onSave, onCancel }: Props) {
       )
       setPhase({
         kind: 'ready',
-        deck: buildImportedDeck(name, resolved, notFound, entryIdByKeyword),
+        deck: buildImportedDeck(name, text, resolved, notFound, entryIdByKeyword, textKeywords),
       })
     } catch (error) {
       setPhase({

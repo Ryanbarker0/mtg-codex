@@ -57,6 +57,13 @@ Archidekt and Moxfield do not allow browser requests from other origins, which i
 A card's mechanics are Scryfall's `keywords` field, which lists the keyword abilities, keyword actions and ability words on the card with the same names as the codex, so each one maps to an entry by exact name.
 Scryfall also lists flavor words there, such as "Grand Summon"; those have no entry and are left out.
 
+That field only covers keywords the card itself has.
+A card that grants or names a keyword, such as Zhulodok, Void Gorger giving cascade to other spells, is found by searching its rules text, with reminder text removed, for keyword abilities as whole words.
+Those show in a separate "Granted or named in card text" group, and as "also named on" under keywords the deck has outright.
+Keyword actions are not searched for this way because their names are everyday verbs in card text.
+
+The pasted list is stored with the deck, and "Check cards on Scryfall again" resolves it afresh, so a deck picks up improvements without being pasted again.
+
 ## Refreshing the data
 
 ```sh

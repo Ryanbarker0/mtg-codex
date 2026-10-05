@@ -37,7 +37,7 @@ interface ScryfallCard {
   type_line: string
   scryfall_uri: string
   image_uris?: ImageUris
-  card_faces?: Array<{ name?: string; image_uris?: ImageUris }>
+  card_faces?: Array<{ name?: string; oracle_text?: string; image_uris?: ImageUris }>
 }
 
 interface SearchResponse {
@@ -96,6 +96,8 @@ export interface ResolvedCard {
   typeLine: string
   /** Scryfall's list of keyword abilities, keyword actions and ability words on the card. */
   keywords: string[]
+  /** Oracle text of every face, so keywords the card grants or names can be found too. */
+  text: string
   artCrop?: string
   quantity: number
   isCommander: boolean
@@ -117,6 +119,7 @@ interface DecklistLine {
 
 interface CollectionCard extends ScryfallCard {
   keywords?: string[]
+  oracle_text?: string
   set: string
   collector_number: string
 }
@@ -179,6 +182,7 @@ function toResolved(card: CollectionCard, line: DecklistLine): ResolvedCard {
     scryfallId: card.id,
     typeLine: card.type_line,
     keywords: card.keywords ?? [],
+    text: card.oracle_text ?? (card.card_faces ?? []).map((f) => f.oracle_text ?? '').join('\n'),
     artCrop: images?.art_crop,
     quantity: line.quantity,
     isCommander: line.isCommander,

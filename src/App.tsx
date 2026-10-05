@@ -7,7 +7,11 @@ import { EntryDetail } from './components/EntryDetail'
 import { EntryList } from './components/EntryList'
 import type { Entry } from './lib/codex'
 import { codex, entriesById } from './lib/codexData'
+import { parseDecklist } from './lib/decklist'
+import { entryIdByKeyword, textKeywords } from './lib/decksData'
+import { refreshDeck } from './lib/importDeck'
 import { loadRecent, pushRecent } from './lib/recent'
+import { lookupDecklist } from './lib/scryfall'
 import { CODEX_ROOT, DECK_IMPORT, DECKS_ROOT, useRoute } from './lib/route'
 import { indexEntries, search, type KindFilter } from './lib/search'
 import { useUserDecks } from './state/useUserDecks'
@@ -231,6 +235,17 @@ export default function App() {
               <DeckDetail
                 deck={deck}
                 onOpenEntry={openEntry}
+                onRefresh={
+                  deck.list !== undefined
+                    ? async () => {
+                        const list = deck.list ?? ''
+                        const { resolved, notFound } = await lookupDecklist(parseDecklist(list))
+                        userDecks.updateDeck(
+                          refreshDeck(deck, resolved, notFound, entryIdByKeyword, textKeywords),
+                        )
+                      }
+                    : undefined
+                }
                 onRemove={() => {
                   userDecks.removeDeck(deck.id)
                   navigate(DECKS_ROOT)
