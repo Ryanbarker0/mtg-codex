@@ -12,8 +12,10 @@ import { entryIdByKeyword, textKeywords } from './lib/decksData'
 import { refreshDeck } from './lib/importDeck'
 import { loadRecent, pushRecent } from './lib/recent'
 import { lookupDecklist } from './lib/scryfall'
-import { CODEX_ROOT, DECK_IMPORT, DECKS_ROOT, useRoute } from './lib/route'
+import { CODEX_ROOT, DECK_IMPORT, DECKS_ROOT, STACK_ROOT, useRoute } from './lib/route'
 import { indexEntries, search, type KindFilter } from './lib/search'
+import { StackApp } from './stack/StackApp'
+import './stack/stack.css'
 import { useUserDecks } from './state/useUserDecks'
 
 const FILTERS: Array<{ value: KindFilter; label: string }> = [
@@ -124,6 +126,13 @@ export default function App() {
             onClick={() => navigate(DECKS_ROOT)}
           >
             Decks
+          </button>
+          <button
+            className={route.view === 'stack' ? 'on' : ''}
+            aria-current={route.view === 'stack' ? 'page' : undefined}
+            onClick={() => navigate(STACK_ROOT)}
+          >
+            Stack
           </button>
         </nav>
         <button
@@ -313,6 +322,12 @@ export default function App() {
               </div>
             )}
           </section>
+        </div>
+      )}
+
+      {route.view === 'stack' && (
+        <div className="stack-app" aria-label="Stack tracker" role="region">
+          <StackApp />
         </div>
       )}
 

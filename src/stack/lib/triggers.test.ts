@@ -1,0 +1,569 @@
+import { describe, expect, it } from 'vitest'
+import {
+  blinkTriggers,
+  castTriggers,
+  castsExiledCard,
+  entersTriggers,
+  entryEffect,
+  isPermanentSpell,
+  qualifierMatches,
+  type Suggestion,
+} from './triggers'
+import type { BattlefieldPermanent, Card } from './types'
+
+/** Real oracle text from Scryfall, fetched 2026-09-03. */
+const card = (
+  name: string,
+  typeLine: string,
+  oracleText: string,
+  colors: string[] = [],
+  manaValue = 10,
+): Card => ({
+  scryfallId: name,
+  oracleId: name,
+  name,
+  typeLine,
+  keywords: [],
+  colors,
+  manaValue,
+  faces: [{ name, manaCost: '', typeLine, oracleText }],
+  scryfallUri: `https://scryfall.com/card/x/1/${name}`,
+})
+
+const ulalek = card(
+  'Ulalek, Fused Atrocity',
+  'Legendary Creature — Eldrazi',
+  "Devoid (This card has no color.)\nWhenever you cast an Eldrazi spell, you may pay {C}{C}. If you do, copy all spells you control, then copy all other activated and triggered abilities you control. You may choose new targets for the copies. (Mana abilities can't be copied.)",
+)
+const monument = card(
+  'Forsaken Monument',
+  'Legendary Artifact',
+  'Colorless creatures you control get +2/+2.\nWhenever you tap a permanent for {C}, add an additional {C}.\nWhenever you cast a colorless spell, you gain 2 life.',
+)
+const echoes = card(
+  'Echoes of Eternity',
+  'Kindred Enchantment — Eldrazi',
+  'If a triggered ability of a colorless spell you control or another colorless permanent you control triggers, that ability triggers an additional time.\nWhenever you cast a colorless spell, copy it. You may choose new targets for the copy. (A copy of a permanent spell becomes a token.)',
+)
+const guardian = card(
+  'Guardian Project',
+  'Enchantment',
+  "Whenever a nontoken creature you control enters, if it doesn't have the same name as another creature you control or a creature card in your graveyard, draw a card.",
+  ['G'],
+)
+const kozilek = card(
+  'Kozilek, Butcher of Truth',
+  'Legendary Creature — Eldrazi',
+  'When you cast this spell, draw four cards.\nAnnihilator 4 (Whenever this creature attacks, defending player sacrifices four permanents of their choice.)\nWhen Kozilek is put into a graveyard from anywhere, its owner shuffles their graveyard into their library.',
+)
+const counterspell = card('Counterspell', 'Instant', 'Counter target spell.', ['U'])
+
+const onField = (c: Card, isToken = false): BattlefieldPermanent => ({
+  id: `field-${c.name}-${isToken}`,
+  card: c,
+  faceIndex: 0,
+  isToken,
+})
+
+const commanderIds = new Set([ulalek.oracleId])
+
+describe('qualifierMatches', () => {
+  const subject = { card: kozilek, face: kozilek.faces[0], isToken: false }
+  it('evaluates types, subtypes and colours', () => {
+    expect(qualifierMatches('Eldrazi', subject)).toBe(true)
+    expect(qualifierMatches('colorless', subject)).toBe(true)
+    expect(qualifierMatches('colorless creature', subject)).toBe(true)
+    expect(qualifierMatches('noncreature', subject)).toBe(false)
+    expect(qualifierMatches('instant or sorcery', subject)).toBe(false)
+    expect(qualifierMatches('Human', subject)).toBe(false)
+    expect(
+      qualifierMatches('blue', { card: counterspell, face: counterspell.faces[0], isToken: false }),
+    ).toBe(true)
+  })
+
+  it('is uncertain when colours are unknown or a word is not understood', () => {
+    const noColors = { ...kozilek, colors: undefined }
+    expect(
+      qualifierMatches('colorless', { card: noColors, face: noColors.faces[0], isToken: false }),
+    ).toBe(undefined)
+  })
+})
+
+describe('castTriggers', () => {
+  it("offers the spell's own cast trigger and every matching cast trigger on the battlefield", () => {
+    const result = castTriggers(
+      kozilek,
+      0,
+      [onField(ulalek), onField(monument), onField(guardian)],
+      commanderIds,
+    )
+    expect(result.map((s) => [s.source.name, s.certain, s.times, s.fromCommander])).toEqual([
+      ['Kozilek, Butcher of Truth', true, 1, false],
+      ['Forsaken Monument', true, 1, false],
+      ['Ulalek, Fused Atrocity', true, 1, true],
+    ])
+  })
+
+  it('places the commander last so its trigger sits on top of the stack', () => {
+    const result = castTriggers(kozilek, 0, [onField(ulalek), onField(monument)], commanderIds)
+    expect(result[result.length - 1].source.name).toBe('Ulalek, Fused Atrocity')
+  })
+
+  it('skips triggers whose condition clearly fails', () => {
+    const result = castTriggers(counterspell, 0, [onField(ulalek), onField(monument)], commanderIds)
+    expect(result).toEqual([])
+  })
+
+  it('flags Echoes of Eternity as copying the spell so the app can do it on resolve', () => {
+    const result = castTriggers(kozilek, 0, [onField(echoes), onField(monument)], commanderIds)
+    expect(result.map((s) => [s.source.name, s.copiesSpell])).toEqual([
+      ['Kozilek, Butcher of Truth', false],
+      ['Echoes of Eternity', true],
+      ['Forsaken Monument', false],
+    ])
+  })
+
+  it('doubles triggers from colorless sources when Echoes of Eternity is out, but not its own', () => {
+    const result = castTriggers(kozilek, 0, [onField(ulalek), onField(echoes)], commanderIds)
+    expect(result.map((s) => [s.source.name, s.times, s.doubledBy])).toEqual([
+      ['Kozilek, Butcher of Truth', 2, 'Echoes of Eternity'],
+      ['Echoes of Eternity', 1, undefined],
+      ['Ulalek, Fused Atrocity', 2, 'Echoes of Eternity'],
+    ])
+  })
+})
+
+describe('granted abilities', () => {
+  const zhulodok = card(
+    'Zhulodok, Void Gorger',
+    'Legendary Creature — Eldrazi',
+    'Colorless spells you cast from your hand with mana value 7 or greater have "Cascade, cascade." (When you cast one, exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order. Then do it again.)',
+  )
+
+  it("offers Zhulodok's double cascade as the spell's own trigger, doubled by Echoes", () => {
+    const result = castTriggers(kozilek, 0, [onField(zhulodok), onField(echoes)], new Set())
+    const cascade = result.find((s) => s.ability.fromKeyword)
+    expect(cascade).toMatchObject({
+      source: kozilek,
+      certain: true,
+      dependsOnCastFrom: true,
+      times: 4,
+      doubledBy: '2× from Zhulodok, Void Gorger + Echoes of Eternity',
+    })
+    expect(cascade?.ability.text).toBe(
+      'Cascade. Exile cards from the top of your library until you exile a nonland card that costs less. You may cast it without paying its mana cost. Put the exiled cards on the bottom in a random order.',
+    )
+    expect(cascade?.grantedBy).toBe('Zhulodok, Void Gorger')
+    expect(castTriggers(counterspell, 0, [onField(zhulodok)], new Set())).toEqual([])
+  })
+
+  it('drops the granted cascade when the spell is cast from somewhere other than the hand', () => {
+    const fromExile = castTriggers(kozilek, 0, [onField(zhulodok)], new Set(), 'elsewhere')
+    expect(fromExile.some((s) => s.ability.fromKeyword)).toBe(false)
+    const fromHand = castTriggers(kozilek, 0, [onField(zhulodok)], new Set(), 'hand')
+    expect(fromHand.some((s) => s.ability.fromKeyword && s.certain === true)).toBe(true)
+  })
+
+  it('marks an own cast trigger with an intervening if as uncertain', () => {
+    const distortion = card(
+      'Kozilek, the Great Distortion',
+      'Legendary Creature — Eldrazi',
+      'When you cast this spell, if you have fewer than seven cards in hand, draw cards equal to the difference.\nMenace\nDiscard a card with mana value X: Counter target spell with mana value X.',
+    )
+    const result = castTriggers(distortion, 0, [], new Set())
+    expect(result.map((s) => [s.certain, s.uncertainReason])).toEqual([
+      [undefined, 'if you have fewer than seven cards in hand'],
+    ])
+  })
+})
+
+describe('mana value conditions', () => {
+  const sanctum = card(
+    'Sanctum of Ugin',
+    'Land',
+    '{T}: Add {C}.\nWhenever you cast a colorless spell with mana value 7 or greater, you may sacrifice this land. If you do, search your library for a colorless creature card, reveal it, put it into your hand, then shuffle.',
+  )
+  const unsealing = card(
+    "Kozilek's Unsealing",
+    'Enchantment',
+    'Devoid (This card has no color.)\nWhenever you cast a creature spell with mana value 4, 5, or 6, create two 0/1 colorless Eldrazi Spawn creature tokens with "Sacrifice this token: Add {C}."\nWhenever you cast a creature spell with mana value 7 or greater, draw three cards.',
+  )
+  const seer = card(
+    'Thought-Knot Seer',
+    'Creature — Eldrazi',
+    'Devoid (This card has no color.)',
+    [],
+    4,
+  )
+
+  it("evaluates 'or greater' and lists against the spell's mana value", () => {
+    const fromField = (list: ReturnType<typeof castTriggers>) =>
+      list.filter((s) => s.source !== kozilek && s.source !== seer)
+    const big = fromField(
+      castTriggers(kozilek, 0, [onField(sanctum), onField(unsealing)], new Set()),
+    )
+    expect(big.map((s) => [s.source.name, s.certain, /7 or greater/.test(s.ability.text)])).toEqual(
+      [
+        ['Sanctum of Ugin', true, true],
+        ["Kozilek's Unsealing", true, true],
+      ],
+    )
+
+    const small = fromField(
+      castTriggers(seer, 0, [onField(sanctum), onField(unsealing)], new Set()),
+    )
+    expect(small.map((s) => [s.source.name, s.certain, /4, 5, or 6/.test(s.ability.text)])).toEqual(
+      [["Kozilek's Unsealing", true, true]],
+    )
+  })
+
+  it('notes that a doubled self-sacrifice trigger only does anything once', () => {
+    const result = castTriggers(kozilek, 0, [onField(sanctum), onField(echoes)], new Set()).filter(
+      (s) => s.source.name === 'Sanctum of Ugin',
+    )
+    expect(result).toHaveLength(1)
+    expect(result[0].times).toBe(2)
+    expect(result[0].note).toMatch(/only the first/)
+    const single = castTriggers(kozilek, 0, [onField(sanctum)], new Set()).filter(
+      (s) => s.source.name === 'Sanctum of Ugin',
+    )
+    expect(single[0].note).toBeUndefined()
+  })
+
+  it('asks the user when the mana value was never stored', () => {
+    const old = { ...kozilek, manaValue: undefined }
+    const result = castTriggers(old, 0, [onField(sanctum)], new Set()).filter(
+      (s) => s.source.name === 'Sanctum of Ugin',
+    )
+    expect(result.map((s) => [s.certain, s.uncertainReason])).toEqual([
+      [undefined, 'mana value unknown, re-import the deck'],
+    ])
+  })
+})
+
+describe('entersTriggers', () => {
+  it('offers enters triggers from the battlefield and marks intervening-if conditions uncertain', () => {
+    const entering = onField(kozilek)
+    const result = entersTriggers(
+      entering,
+      [onField(ulalek), onField(guardian), entering],
+      commanderIds,
+    )
+    expect(result.map((s) => [s.source.name, s.certain, s.uncertainReason])).toEqual([
+      [
+        'Guardian Project',
+        undefined,
+        "if it doesn't have the same name as another creature you control or a creature card in your graveyard",
+      ],
+    ])
+  })
+
+  it('does not offer Guardian Project for a token', () => {
+    const token = onField(kozilek, true)
+    expect(entersTriggers(token, [onField(guardian), token], commanderIds)).toEqual([])
+  })
+
+  it("offers the permanent's own enters trigger", () => {
+    const seer = card(
+      'Thought-Knot Seer',
+      'Creature — Eldrazi',
+      'Devoid (This card has no color.)\nWhen this creature enters, target opponent reveals their hand. You choose a nonland card from it and exile that card.\nWhen this creature leaves the battlefield, target opponent draws a card.',
+    )
+    const entering = onField(seer)
+    const result = entersTriggers(entering, [entering], new Set())
+    expect(result.map((s) => s.ability.text.slice(0, 26))).toEqual(['When this creature enters,'])
+  })
+})
+
+describe('isPermanentSpell', () => {
+  it('distinguishes permanents from instants and sorceries', () => {
+    expect(isPermanentSpell(kozilek.faces[0])).toBe(true)
+    expect(isPermanentSpell(counterspell.faces[0])).toBe(false)
+    expect(isPermanentSpell(echoes.faces[0])).toBe(true)
+  })
+})
+
+describe('dinosaur deck shapes', () => {
+  const dino = (name: string, text: string, power: string, toughness: string, mv = 4): Card => ({
+    ...card(name, 'Creature — Dinosaur', text, ['G'], mv),
+    power,
+    toughness,
+  })
+  const pantlaza = dino(
+    'Pantlaza, Sun-Favored',
+    "Whenever Pantlaza or another Dinosaur you control enters, you may discover X, where X is that creature's toughness. Do this only once each turn. (Exile cards from the top of your library until you exile a nonland card with that mana value or less. Cast it without paying its mana cost or put it into your hand. Put the rest on the bottom in a random order.)",
+    '4',
+    '4',
+  )
+  const raptor = dino(
+    'Marauding Raptor',
+    'Creature spells you cast cost {1} less to cast.\nWhenever another creature you control enters, this creature deals 2 damage to it. If a Dinosaur is dealt damage this way, this creature gets +2/+0 until end of turn.',
+    '2',
+    '3',
+  )
+  const tyrant = dino(
+    'Vaultborn Tyrant',
+    "Trample\nWhenever this creature or another creature you control with power 4 or greater enters, you gain 3 life and draw a card.\nWhen this creature dies, if it's not a token, create a token that's a copy of it, except it's an artifact in addition to its other types.",
+    '6',
+    '6',
+    7,
+  )
+  const stomper = dino(
+    'Topiary Stomper',
+    "Vigilance\nWhen this creature enters, search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nThis creature can't attack or block unless you control seven or more lands.",
+    '4',
+    '4',
+  )
+  const commanderIds = new Set([pantlaza.oracleId])
+
+  it('offers Pantlaza for another Dinosaur entering, with the once-each-turn note, and Raptor for any other creature', () => {
+    const entering = onField(stomper)
+    const result = entersTriggers(
+      entering,
+      [onField(pantlaza), onField(raptor), entering],
+      commanderIds,
+    )
+    expect(result.map((s) => [s.source.name, s.certain, s.note !== undefined])).toEqual([
+      ['Topiary Stomper', true, false],
+      ['Marauding Raptor', true, false],
+      ['Pantlaza, Sun-Favored', true, true],
+    ])
+    expect(result[2].fromCommander).toBe(true)
+    expect(castsExiledCard(result[2].ability.text)).toBe(true)
+  })
+
+  it('offers Pantlaza for itself entering, but not Marauding Raptor for itself', () => {
+    const p = onField(pantlaza)
+    expect(entersTriggers(p, [onField(raptor), p], commanderIds).map((s) => s.source.name)).toEqual(
+      ['Marauding Raptor', 'Pantlaza, Sun-Favored'],
+    )
+    const r = onField(raptor)
+    expect(entersTriggers(r, [r], commanderIds)).toEqual([])
+  })
+
+  it('evaluates power clauses against printed power', () => {
+    const big = onField(tyrant)
+    const small = onField(raptor)
+    expect(entersTriggers(big, [big], commanderIds).map((s) => s.source.name)).toEqual([
+      'Vaultborn Tyrant',
+    ])
+    expect(entersTriggers(small, [onField(tyrant), small], commanderIds)).toEqual([])
+    const stomperIn = onField(stomper)
+    expect(
+      entersTriggers(stomperIn, [onField(tyrant), stomperIn], commanderIds).map(
+        (s) => s.source.name,
+      ),
+    ).toEqual(['Topiary Stomper', 'Vaultborn Tyrant'])
+  })
+
+  it('treats discover like cascade for casting the exiled card', () => {
+    expect(castsExiledCard('When this creature enters, discover 5.')).toBe(true)
+    expect(castsExiledCard('Cascade. Exile cards...')).toBe(true)
+    expect(castsExiledCard('When this creature enters, draw a card.')).toBe(false)
+  })
+})
+
+describe('blink deck shapes', () => {
+  /** Real oracle text from Scryfall, fetched 2026-10-01. */
+  const panharmonicon = card(
+    'Panharmonicon',
+    'Artifact',
+    'If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.',
+  )
+  const preston = card(
+    'Preston, the Vanisher',
+    'Legendary Creature — Rabbit Wizard',
+    "Whenever another nontoken creature you control enters, if it wasn't cast, create a token that's a copy of that creature, except it's a 0/1 white Illusion.\n{1}{W}, Sacrifice five Illusions: Exile target nonland permanent.",
+    ['W'],
+    4,
+  )
+  const tocasia = card(
+    "Tocasia's Welcome",
+    'Enchantment',
+    'Whenever one or more creatures you control with mana value 3 or less enter, draw a card. This ability triggers only once each turn.',
+    ['W'],
+    3,
+  )
+  const sunTitan = card(
+    'Sun Titan',
+    'Creature — Giant',
+    'Vigilance\nWhenever this creature enters or attacks, you may return target permanent card with mana value 3 or less from your graveyard to the battlefield.',
+    ['W'],
+    6,
+  )
+  const duplicant = card(
+    'Duplicant',
+    'Artifact Creature — Shapeshifter',
+    "Imprint — When this creature enters, you may exile target nontoken creature.\nAs long as a card exiled with this creature is a creature card, this creature has the power, toughness, and creature types of the last creature card exiled with it. It's still a Shapeshifter.",
+    [],
+    6,
+  )
+  const companion = card(
+    'Spirited Companion',
+    'Enchantment Creature — Dog',
+    'When this creature enters, draw a card.',
+    ['W'],
+    2,
+  )
+  const court = card(
+    'Court of Grace',
+    'Enchantment',
+    "When this enchantment enters, you become the monarch.\nAt the beginning of your upkeep, create a 1/1 white Spirit creature token with flying. If you're the monarch, create a 4/4 white Angel creature token with flying instead.",
+    ['W'],
+    4,
+  )
+  const fountain = card(
+    'Radiant Fountain',
+    'Land',
+    'When this land enters, you gain 2 life.\n{T}: Add {C}.',
+    [],
+    0,
+  )
+  const apparition = card(
+    'Skyclave Apparition',
+    'Creature — Kor Spirit',
+    "When this creature enters, exile up to one target nonland, nontoken permanent you don't control with mana value 4 or less.\nWhen this creature leaves the battlefield, the exiled card's owner creates an X/X blue Illusion creature token, where X is the mana value of the exiled card.",
+    ['W'],
+    3,
+  )
+  const dack = card(
+    'Dack Fayden, Helping Hand',
+    'Legendary Creature — Human Advisor',
+    "When Dack Fayden enters, reveal cards from the top of your library until you reveal X creature cards, where X is the number of opponents you have. Put those creature cards onto the battlefield, then shuffle. They're goaded for the rest of the game. For each of those permanents, choose a different opponent. Each opponent gains control of the permanent for which they were chosen.",
+    ['W'],
+    6,
+  )
+  const field = [onField(panharmonicon), onField(preston), onField(tocasia)]
+  const names = (s: Suggestion[]) => s.map((x) => `${x.source.name}×${x.times}`)
+
+  it('offers "whenever this creature enters or attacks" and an ability-word enters trigger as the permanent\'s own', () => {
+    const titan = onField(sunTitan)
+    expect(names(entersTriggers(titan, [titan], new Set()))).toEqual(['Sun Titan×1'])
+    const dup = onField(duplicant)
+    expect(names(entersTriggers(dup, [dup], new Set()))).toEqual(['Duplicant×1'])
+  })
+
+  it('reads a plural qualifier with a mana value clause, with the once-each-turn note', () => {
+    const entering = onField(companion)
+    const [welcome] = entersTriggers(entering, [onField(tocasia), entering], new Set()).filter(
+      (s) => s.source.name === "Tocasia's Welcome",
+    )
+    expect(welcome.certain).toBe(true)
+    expect(welcome.note).toMatch(/only once each turn/)
+    const big = onField(sunTitan)
+    expect(entersTriggers(big, [onField(tocasia), big], new Set())).toHaveLength(1)
+  })
+
+  it('doubles enters triggers with Panharmonicon only for an artifact or creature entering', () => {
+    const creature = onField(companion)
+    expect(names(entersTriggers(creature, [...field, creature], new Set(), 'notCast'))).toEqual([
+      'Spirited Companion×2',
+      'Preston, the Vanisher×2',
+      "Tocasia's Welcome×2",
+    ])
+    const enchantment = onField(court)
+    expect(names(entersTriggers(enchantment, [...field, enchantment], new Set()))).toEqual([
+      'Court of Grace×1',
+    ])
+    const land = onField(fountain)
+    expect(names(entersTriggers(land, [...field, land], new Set()))).toEqual(['Radiant Fountain×1'])
+  })
+
+  it('does not let Panharmonicon double cast triggers, and adds doublers rather than multiplying', () => {
+    expect(
+      names(castTriggers(kozilek, 0, [onField(panharmonicon), onField(monument)], new Set())),
+    ).toEqual(['Kozilek, Butcher of Truth×1', 'Forsaken Monument×1'])
+    const two = [onField(panharmonicon), { ...onField(panharmonicon), id: 'second' }]
+    const creature = onField(companion)
+    const [own] = entersTriggers(creature, [...two, creature], new Set())
+    expect(own.times).toBe(3)
+    expect(own.doublers).toEqual(['Panharmonicon', 'Panharmonicon'])
+  })
+
+  it('evaluates Preston\'s "if it wasn\'t cast" from how the permanent entered', () => {
+    const creature = onField(companion)
+    const cast = entersTriggers(creature, [onField(preston), creature], new Set(), 'cast')
+    expect(cast.map((s) => s.source.name)).toEqual(['Spirited Companion'])
+    const notCast = entersTriggers(creature, [onField(preston), creature], new Set(), 'notCast')
+    const [p] = notCast.filter((s) => s.source.name === 'Preston, the Vanisher')
+    expect(p.certain).toBe(true)
+    expect(p.dependsOnEntry).toBe(true)
+    const unknown = entersTriggers(creature, [onField(preston), creature], new Set())
+    const [u] = unknown.filter((s) => s.source.name === 'Preston, the Vanisher')
+    expect(u.certain).toBeUndefined()
+    expect(u.uncertainReason).toBe("if it wasn't cast")
+    // The token copy Preston makes is a token, so Preston does not trigger for it.
+    const token = onField(companion, true)
+    expect(
+      entersTriggers(token, [onField(preston), token], new Set(), 'notCast').map(
+        (s) => s.source.name,
+      ),
+    ).toEqual(['Spirited Companion'])
+  })
+
+  it('offers leaves triggers and the full enters set for a blink, but only leaves for a token', () => {
+    const apparitionOnField = onField(apparition)
+    const blinked = blinkTriggers(apparitionOnField, [...field, apparitionOnField], new Set())
+    expect(
+      blinked.map((s) => `${s.source.name}:${s.ability.text.slice(0, 29)}×${s.times}`),
+    ).toEqual([
+      'Skyclave Apparition:When this creature leaves the×1',
+      'Skyclave Apparition:When this creature enters, ex×2',
+      'Preston, the Vanisher:Whenever another nontoken cre×2',
+      "Tocasia's Welcome:Whenever one or more creature×2",
+    ])
+    const token = onField(apparition, true)
+    expect(blinkTriggers(token, [...field, token], new Set()).map((s) => s.ability.text)).toEqual([
+      apparition.faces[0].oracleText.split('\n')[1],
+    ])
+  })
+
+  it('reads what a resolving effect puts onto the battlefield', () => {
+    expect(
+      entryEffect(
+        'Exile target creature you control, then return that card to the battlefield under your control.',
+      ),
+    ).toEqual({ kind: 'blink' })
+    expect(
+      entryEffect(
+        'When this creature enters, you may exile target non-Angel creature you control, then return that card to the battlefield under your control.',
+      ),
+    ).toEqual({ kind: 'blink' })
+    // Delayed returns are not blinks; the user taps ↻ when the card comes back.
+    expect(
+      entryEffect(
+        "When this creature enters, exile another target permanent. Return that card to the battlefield under its owner's control at the beginning of the next end step.",
+      ),
+    ).toBeNull()
+    expect(entryEffect(dack.faces[0].oracleText)).toEqual({
+      kind: 'fromElsewhere',
+      several: true,
+      keeps: false,
+      cardType: 'creature',
+    })
+    expect(entryEffect(sunTitan.faces[0].oracleText.split('\n')[1])).toEqual({
+      kind: 'fromElsewhere',
+      several: false,
+      keeps: true,
+      cardType: 'permanent',
+    })
+    expect(entryEffect(preston.faces[0].oracleText.split('\n')[0])).toEqual({ kind: 'tokenCopy' })
+    expect(
+      entryEffect(
+        "Embalm {5}{W} ({5}{W}, Exile this card from your graveyard: Create a token that's a copy of it, except it's a white Zombie Angel with no mana cost. Embalm only as a sorcery.)",
+      ),
+    ).toEqual({ kind: 'tokenCopy' })
+    // Fetching a basic land is not worth a question.
+    expect(
+      entryEffect(
+        'When this creature enters, if an opponent controls more lands than you, you may search your library for a Plains card, put it onto the battlefield, then shuffle.',
+      ),
+    ).toBeNull()
+    expect(
+      entryEffect(
+        'Destroy target permanent. Its controller creates a 3/3 green Elephant creature token.',
+      ),
+    ).toBeNull()
+    expect(entryEffect('Legendary Creature — Eldrazi')).toBeNull()
+  })
+})

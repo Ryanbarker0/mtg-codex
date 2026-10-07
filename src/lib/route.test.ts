@@ -18,6 +18,8 @@ describe('route', () => {
     expect(parseHash('#/decks')).toEqual({ view: 'decks', deckId: null })
     expect(parseHash('#/decks/')).toEqual({ view: 'decks', deckId: null })
     expect(parseHash('#/decks/import')).toEqual({ view: 'decks', deckId: null, importing: true })
+    expect(parseHash('#/stack')).toEqual({ view: 'stack' })
+    expect(hashFor({ view: 'stack' })).toBe('#/stack')
     expect(hashFor({ view: 'decks', deckId: null, importing: true })).toBe('#/decks/import')
   })
 

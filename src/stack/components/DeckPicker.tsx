@@ -1,0 +1,106 @@
+import { useMemo, useState } from 'react'
+import { isLand } from '../lib/abilities'
+import { normaliseText } from '../lib/text'
+import type { Card, Deck } from '../lib/types'
+
+interface Props {
+  title: string
+  subtitle: string
+  deck: Deck
+  /** Lands are left out by default: a cascade hit is never a land. */
+  includeLands?: boolean
+  /** Only cards with this type on a face, e.g. "creature" for what Dack Fayden reveals; "permanent" means any nonland permanent or land. */
+  typeFilter?: string
+  /** Text to start the filter with, e.g. the name of the creature a token copies. */
+  initialFilter?: string
+  cancelLabel?: string
+  onPick: (card: Card) => void
+  onCancel: () => void
+}
+
+/**
+ * Picks any card from the whole deck, not just the palette. Used for cascade hits, which
+ * can be anything in the library, and for cards an effect put onto the battlefield.
+ */
+export function DeckPicker({
+  title,
+  subtitle,
+  deck,
+  includeLands = false,
+  typeFilter,
+  initialFilter = '',
+  cancelLabel = 'Nothing cast',
+  onPick,
+  onCancel,
+}: Props) {
+  const [filter, setFilter] = useState(initialFilter)
+  const cards = useMemo(() => {
+    const needle = normaliseText(filter)
+    const hasType = (c: Card) => {
+      if (!typeFilter) return true
+      if (typeFilter === 'permanent')
+        return c.faces.some((f) => !/\b(Instant|Sorcery)\b/.test(f.typeLine))
+      return c.faces.some((f) => new RegExp(`\\b${typeFilter}\\b`, 'i').test(f.typeLine))
+    }
+    return deck.entries
+      .map((e) => e.card)
+      .filter((c) => includeLands || c.faces.some((f) => !isLand(f)))
+      .filter(hasType)
+      .filter((c) => needle === '' || normaliseText(c.name).includes(needle))
+      .sort((a, b) => (a.manaValue ?? 0) - (b.manaValue ?? 0) || a.name.localeCompare(b.name))
+  }, [deck, filter, includeLands, typeFilter])
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel} role="presentation">
+      <div
+        className="modal single"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className="stackable">
+          <div>
+            <h1>{title}</h1>
+            <p className="muted">{subtitle}</p>
+          </div>
+          <input
+            type="search"
+            name="pick"
+            placeholder="Filter by name…"
+            value={filter}
+            autoFocus
+            autoCorrect="off"
+            autoCapitalize="none"
+            onChange={(e) => setFilter(e.target.value)}
+            aria-label="Filter cards"
+          />
+          <div className="picker-list">
+            {cards.map((card) => (
+              <button key={card.scryfallId} className="picker-row" onClick={() => onPick(card)}>
+                {card.faces[0].imageUrl ? (
+                  <img src={card.faces[0].imageUrl} alt="" loading="lazy" />
+                ) : (
+                  <span className="thumb" />
+                )}
+                <span className="body">
+                  <strong>{card.name}</strong>
+                  <span className="faint">
+                    {card.faces[0].typeLine}
+                    {card.manaValue !== undefined ? ` · MV ${card.manaValue}` : ''}
+                  </span>
+                </span>
+              </button>
+            ))}
+            {cards.length === 0 && <div className="empty">No cards match.</div>}
+          </div>
+          <div className="row">
+            <button className="ghost" onClick={onCancel}>
+              {cancelLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

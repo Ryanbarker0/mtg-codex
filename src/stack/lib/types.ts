@@ -1,0 +1,148 @@
+/**
+ * Core domain types.
+ *
+ * Everything about a card comes verbatim from Scryfall. We never hand-author
+ * card text; we only classify the text Scryfall gives us so the user can pick
+ * abilities to put on the stack.
+ */
+
+/** One face of a card as stored locally. Single-faced cards have exactly one face. */
+export interface CardFace {
+  name: string
+  manaCost: string
+  typeLine: string
+  oracleText: string
+  /** Small image URL (Scryfall "small" or "normal"). May be missing for some faces. */
+  imageUrl?: string
+}
+
+/** A card as stored in a deck, trimmed down from the Scryfall response. */
+export interface Card {
+  /** Scryfall card id (printing-specific). */
+  scryfallId: string
+  /** Scryfall oracle id (shared across printings). */
+  oracleId: string
+  name: string
+  typeLine: string
+  keywords: string[]
+  /** Scryfall colour codes (W U B R G). Empty for colorless. Missing on decks imported before colours were stored. */
+  colors?: string[]
+  /** Mana value (Scryfall cmc). Missing on decks imported before it was stored. */
+  manaValue?: number
+  /** Printed power and toughness for creatures, as Scryfall gives them ("4", "*", "1+*"). */
+  power?: string
+  toughness?: string
+  faces: CardFace[]
+  scryfallUri: string
+  /** Rulings text pulled from Scryfall, fetched lazily. */
+  rulings?: string[]
+}
+
+/** 'mana' marks mana abilities, which never use the stack (CR 605). */
+export type AbilityKind = 'triggered' | 'activated' | 'mana' | 'static'
+
+/** One ability line extracted from a card's oracle text. */
+export interface Ability {
+  /** Stable id: `${oracleId}:${faceIndex}:${lineIndex}` */
+  id: string
+  cardOracleId: string
+  faceIndex: number
+  kind: AbilityKind
+  text: string
+  /** True for keyword abilities we synthesised (e.g. "Annihilator 2") rather than raw lines. */
+  fromKeyword?: boolean
+}
+
+export interface DeckEntry {
+  card: Card
+  quantity: number
+  /**
+   * Whether this card appears in the in-game palette. Defaults to true when the
+   * card has any triggered or activated ability; the user can override either way.
+   */
+  included: boolean
+  isCommander: boolean
+}
+
+/** A short note about an interaction in this deck, in the player's own words. */
+export interface DeckNote {
+  id: string
+  title: string
+  body: string
+  /** Card names the note is about. The insight panel shows the note for items from these cards. */
+  cards: string[]
+}
+
+export interface Deck {
+  id: string
+  name: string
+  entries: DeckEntry[]
+  notes?: DeckNote[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type StackItemKind = 'spell' | 'triggered' | 'activated' | 'copy' | 'note'
+
+/** An object on the stack. */
+export interface StackItem {
+  id: string
+  kind: StackItemKind
+  /** Who controls it. "You" for the app user; free text for opponents. */
+  controller: string
+  title: string
+  /** The rules text of the spell or ability, shown under the title. */
+  text: string
+  imageUrl?: string
+  scryfallUri?: string
+  /** If this is a copy, the id of the item it was copied from (may be resolved already). */
+  copyOf?: string
+  /** For copies, the kind of the original so a copied permanent spell still becomes a token. */
+  originalKind?: StackItemKind
+  /** Which face of the card this item represents. */
+  faceIndex?: number
+  /**
+   * What the app does when this item resolves. 'copySpell' copies the spell in
+   * `refersTo` (Echoes of Eternity's "whenever you cast a colorless spell, copy it").
+   * 'cascade' offers to cast the exiled card. Copies of the item inherit this, so a
+   * copied Echoes trigger copies the spell again and a copied cascade gets its own hit.
+   */
+  onResolve?: 'copySpell' | 'cascade'
+  /** Stack item id this item refers to, e.g. the spell whose cast triggered it. */
+  refersTo?: string
+  /**
+   * Where this item came from, oldest cause first, e.g.
+   * ["Cast of Ulamog", "Copied by Ulalek, round 1", "Copied by Ulalek, round 2"].
+   */
+  origin?: string[]
+  /** Free-form annotation the user typed, e.g. targets. */
+  note?: string
+  /** The full card, when the item came from one, so the detail view can show image and rulings. */
+  card?: Card
+  createdAt: number
+}
+
+export interface ResolvedItem {
+  item: StackItem
+  /** How it left the stack. 'fizzled' means it resolved but could do nothing. */
+  outcome: 'resolved' | 'removed' | 'fizzled'
+  at: number
+}
+
+/** A permanent you control. Used only to suggest triggers; it is not a full board state. */
+export interface BattlefieldPermanent {
+  id: string
+  card: Card
+  faceIndex: number
+  isToken: boolean
+}
+
+export interface GameState {
+  /** Bottom of the stack is index 0; top (next to resolve) is the last element. */
+  stack: StackItem[]
+  history: ResolvedItem[]
+  battlefield: BattlefieldPermanent[]
+}
+
+/** A parsed line from a pasted decklist, shared with the codex's deck import. */
+export type { DecklistLine } from '../../lib/decklist'

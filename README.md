@@ -22,6 +22,18 @@ Every block of text names its source, and the definitions are quoted rather than
   Tap a mechanic to read its entry, and every entry shows which of your decks use it.
 - Add your decks by pasting the text export from Archidekt or Moxfield.
   Cards are looked up on Scryfall in the browser and the deck is kept in IndexedDB on the device, so nothing is hosted, nothing leaves the device, and no decks ship with the app.
+- A Stack tab holds the stack tracker, for visualising the stack during a complex turn.
+
+## The Stack tab
+
+The Stack tab is the former [MTG Stack Tracker](https://github.com/Ryanbarker0/mtg-stack-tracker), brought in whole so one app covers looking things up and tracking a complex turn.
+It is a touch-first visualiser for the stack: import a deck by pasting a decklist, tap abilities to put them on the stack, and the app offers the triggers your permanents produce when you cast a spell or something enters.
+It is a tracker, not a rules engine; the player remains the judge.
+Its decks are separate from the Decks tab for now and are stored on the device under the tracker's original storage name, so decks and games from the standalone tracker carry over on the same site.
+
+The tracker's source lives under `src/stack/` with its own tests.
+Its stylesheet is nested under `.stack-app` so its class names cannot collide with the codex's, and it shares the codex's text and decklist helpers.
+The decklists it used to ship as presets are gone; nothing personal ships with the app.
 
 ## Where the data comes from
 
@@ -111,6 +123,7 @@ The app installs as a standalone PWA and updates itself on the next launch after
 - `src/lib/decklist.ts` parses pasted decklists; `src/lib/importDeck.ts` turns a resolved list into a deck.
 - `src/lib/storage.ts` and `src/state/useUserDecks.ts` keep imported decks in IndexedDB.
 - `src/components/` holds the list, the entry view, the rules renderer, the card viewer and the deck screens.
+- `src/stack/` is the stack tracker: its screens in `components/`, the stack reducer and persistence in `state/`, and ability classification, trigger detection and explanations in `lib/`.
 
 ## Notices
 

@@ -195,3 +195,41 @@ describe('Deck import', () => {
     expect(within(list).queryAllByRole('button', { name: /cards ·/ })).toHaveLength(0)
   })
 })
+
+describe('Stack tab', () => {
+  beforeEach(() => {
+    window.location.hash = ''
+    localStorage.clear()
+    indexedDB.deleteDatabase('mtg-stack-tracker')
+    vi.stubGlobal('fetch', vi.fn(emptySearch))
+    Element.prototype.scrollTo = vi.fn()
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('opens the stack tracker on its own deck list', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Stack' }))
+    expect(window.location.hash).toBe('#/stack')
+    const stack = screen.getByRole('region', { name: 'Stack tracker' })
+    expect(
+      await within(stack).findByRole('heading', { level: 1, name: 'Decks' }),
+    ).toBeInTheDocument()
+    expect(within(stack).getByRole('button', { name: /Import deck/ })).toBeInTheDocument()
+    // The codex panes are not rendered behind it.
+    expect(screen.queryByRole('region', { name: 'Search' })).not.toBeInTheDocument()
+  })
+
+  it("reaches the tracker's import screen", async () => {
+    window.location.hash = '#/stack'
+    render(<App />)
+    const stack = screen.getByRole('region', { name: 'Stack tracker' })
+    fireEvent.click(await within(stack).findByRole('button', { name: /Import deck/ }))
+    expect(
+      within(stack).getByRole('heading', { level: 1, name: 'Import a deck' }),
+    ).toBeInTheDocument()
+    expect(within(stack).getByRole('textbox', { name: 'Decklist' })).toBeInTheDocument()
+  })
+})

@@ -1,12 +1,16 @@
-/** Lower-cases and strips accents and curly punctuation so searches match however a name is typed. */
+/**
+ * Normalises text for matching names typed on a touch keyboard against Scryfall and the
+ * rules. iOS smart punctuation turns ' into ’ and " into “ ”, and people type names without
+ * accents ("Lim-Dul" for "Lim-Dûl"), so both sides of every comparison go through this.
+ */
 export function normaliseText(text: string): string {
   return text
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[‘’‚‛′`´]/g, "'")
+    .replace(/[“”„‟″]/g, '"')
+    .replace(/[‐-―−]/g, '-')
     .toLowerCase()
-    .replace(/[’‘]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[—–]/g, '-')
     .replace(/\s+/g, ' ')
     .trim()
 }
